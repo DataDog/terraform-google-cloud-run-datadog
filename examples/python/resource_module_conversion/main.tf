@@ -38,17 +38,6 @@ module "datadog-cloud-run-v2-wrapper" {
 
     containers = [
       {
-
-        name = "new-container"
-        image = "us-docker.pkg.dev/cloudrun/container/hello"
-        volume_mounts = [
-          {
-            mount_path = "/tmp/test"
-            name = "test-volume"
-          }
-        ]
-      },
-      {
         name = "tf-cloudrun-python-test"
         image = var.image
         resources = {
@@ -107,15 +96,6 @@ module "datadog-cloud-run-v2-wrapper" {
 #       empty_dir {
 #         medium = "MEMORY"
 #         size_limit = "100Mi"
-#       }
-#     }
-    
-#     containers {
-#       name = "new-container"
-#       image = "us-docker.pkg.dev/cloudrun/container/hello"
-#       volume_mounts {
-#         mount_path = "/tmp/test"
-#         name = "test-volume"
 #       }
 #     }
 
