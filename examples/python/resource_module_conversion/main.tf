@@ -9,18 +9,14 @@ provider "google" {
 }
 
 module "datadog-cloud-run-v2-wrapper" {
-  source = "../../"
+  source = "../../../"
   name = var.name # For moving, MUST MATCH NAME PASSED INTO RESOURCE
   location = var.location
   deletion_protection = false
 
-  binary_authorization = {
-    use_default = true
-  }
-
   template = {
     labels = {
-      "my_label" = "radia_wrapper_with_all_fields"
+      "my_label" = "test_wrapper_with_all_fields"
     }
     volumes = [
       {
@@ -92,14 +88,10 @@ module "datadog-cloud-run-v2-wrapper" {
 #   name     = var.name #For moving, MUST MATCH NAME PASSED INTO MODULE
 #   location = var.location
 #   deletion_protection = false
-
-#   binary_authorization {
-#     use_default = true
-#   }
   
 #   template {
 #     labels = {
-#       "my_label" = "radia_wrapper_with_all_fields"
+#       "my_label" = "test_wrapper_with_all_fields"
 #     }
 
 #     volumes {
