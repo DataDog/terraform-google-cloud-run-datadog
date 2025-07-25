@@ -6,7 +6,17 @@
         "always_allow": [
             "project",
             "ingress",
-            "launch_stage"
+            "launch_stage",
+            "name",
+            "port",
+            "limits",
+            "service_account",
+            "timeout",
+            "max_instance_request_concurrency",
+            "egress",
+            "network",
+            "subnetwork",
+            "percent"
         ],
         "never_allow": []
     }

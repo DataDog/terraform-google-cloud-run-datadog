@@ -151,6 +151,7 @@ variable "build_config" {
     environment_variables    = optional(map(string)),
     function_target          = optional(string),
     image_uri                = optional(string),
+    name                     = string,
     service_account          = optional(string),
     source_location          = optional(string),
     worker_pool              = optional(string)
@@ -171,13 +172,16 @@ variable "scaling" {
 
 variable "template" {
   type = object({
-    annotations                   = optional(map(string)),
-    encryption_key                = optional(string),
-    execution_environment         = optional(string),
-    gpu_zonal_redundancy_disabled = optional(bool),
-    labels                        = optional(map(string)),
-    revision                      = optional(string),
-    session_affinity              = optional(bool),
+    annotations                      = optional(map(string)),
+    encryption_key                   = optional(string),
+    execution_environment            = optional(string),
+    gpu_zonal_redundancy_disabled    = optional(bool),
+    labels                           = optional(map(string)),
+    max_instance_request_concurrency = optional(number),
+    revision                         = optional(string),
+    service_account                  = optional(string),
+    session_affinity                 = optional(bool),
+    timeout                          = optional(string),
     containers = optional(list(object({
       args           = optional(list(string)),
       base_image_uri = optional(string),
@@ -202,10 +206,12 @@ variable "template" {
         period_seconds        = optional(number),
         timeout_seconds       = optional(number),
         grpc = optional(object({
+          port    = optional(number),
           service = optional(string)
         })),
         http_get = optional(object({
           path = optional(string),
+          port = optional(number),
           http_headers = optional(list(object({
             name  = string,
             value = optional(string)
@@ -216,10 +222,12 @@ variable "template" {
         }))
       })),
       ports = optional(object({
-        container_port = optional(number)
+        container_port = optional(number),
+        name           = optional(string)
       })),
       resources = optional(object({
         cpu_idle          = optional(bool),
+        limits            = optional(map(string)),
         startup_cpu_boost = optional(bool)
       })),
       startup_probe = optional(object({
@@ -228,17 +236,19 @@ variable "template" {
         period_seconds        = optional(number),
         timeout_seconds       = optional(number),
         grpc = optional(object({
+          port    = optional(number),
           service = optional(string)
         })),
         http_get = optional(object({
           path = optional(string),
+          port = optional(number),
           http_headers = optional(list(object({
             name  = string,
             value = optional(string)
           })))
         })),
         tcp_socket = optional(object({
-
+          port = optional(number)
         }))
       })),
       volume_mounts = optional(list(object({
@@ -283,8 +293,11 @@ variable "template" {
     }))),
     vpc_access = optional(object({
       connector = optional(string),
+      egress    = optional(string),
       network_interfaces = optional(list(object({
-        tags = optional(list(string))
+        network    = optional(string),
+        subnetwork = optional(string),
+        tags       = optional(list(string))
       })))
     }))
   })
@@ -302,6 +315,7 @@ variable "timeouts" {
 
 variable "traffic" {
   type = list(object({
+    percent  = optional(number),
     revision = optional(string),
     tag      = optional(string),
     type     = optional(string)

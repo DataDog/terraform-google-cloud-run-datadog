@@ -30,6 +30,7 @@ resource "google_cloud_run_v2_service" "this" {
       environment_variables    = var.build_config.environment_variables
       function_target          = var.build_config.function_target
       image_uri                = var.build_config.image_uri
+      # name                     = var.build_config.name
       service_account          = var.build_config.service_account
       source_location          = var.build_config.source_location
       worker_pool              = var.build_config.worker_pool
@@ -44,13 +45,16 @@ resource "google_cloud_run_v2_service" "this" {
     }
   }
   template {
-    annotations                   = var.template.annotations
-    encryption_key                = var.template.encryption_key
-    execution_environment         = var.template.execution_environment
-    gpu_zonal_redundancy_disabled = var.template.gpu_zonal_redundancy_disabled
-    labels                        = var.template.labels
-    revision                      = var.template.revision
-    session_affinity              = var.template.session_affinity
+    annotations                      = var.template.annotations
+    encryption_key                   = var.template.encryption_key
+    execution_environment            = var.template.execution_environment
+    gpu_zonal_redundancy_disabled    = var.template.gpu_zonal_redundancy_disabled
+    labels                           = var.template.labels
+    max_instance_request_concurrency = var.template.max_instance_request_concurrency
+    revision                         = var.template.revision
+    service_account                  = var.template.service_account
+    session_affinity                 = var.template.session_affinity
+    timeout                          = var.template.timeout
     dynamic "containers" {
       for_each = var.template.containers != null ? var.template.containers : []
       content {
@@ -90,6 +94,7 @@ resource "google_cloud_run_v2_service" "this" {
             dynamic "grpc" {
               for_each = containers.value.liveness_probe.grpc != null ? [true] : []
               content {
+                port    = containers.value.liveness_probe.grpc.port
                 service = containers.value.liveness_probe.grpc.service
               }
             }
@@ -97,6 +102,7 @@ resource "google_cloud_run_v2_service" "this" {
               for_each = containers.value.liveness_probe.http_get != null ? [true] : []
               content {
                 path = containers.value.liveness_probe.http_get.path
+                port = containers.value.liveness_probe.http_get.port
                 dynamic "http_headers" {
                   for_each = containers.value.liveness_probe.http_get.http_headers != null ? containers.value.liveness_probe.http_get.http_headers : []
                   content {
@@ -118,12 +124,14 @@ resource "google_cloud_run_v2_service" "this" {
           for_each = containers.value.ports != null ? [true] : []
           content {
             container_port = containers.value.ports.container_port
+            name           = containers.value.ports.name
           }
         }
         dynamic "resources" {
           for_each = containers.value.resources != null ? [true] : []
           content {
             cpu_idle          = containers.value.resources.cpu_idle
+            limits            = containers.value.resources.limits
             startup_cpu_boost = containers.value.resources.startup_cpu_boost
           }
         }
@@ -137,6 +145,7 @@ resource "google_cloud_run_v2_service" "this" {
             dynamic "grpc" {
               for_each = containers.value.startup_probe.grpc != null ? [true] : []
               content {
+                port    = containers.value.startup_probe.grpc.port
                 service = containers.value.startup_probe.grpc.service
               }
             }
@@ -144,6 +153,7 @@ resource "google_cloud_run_v2_service" "this" {
               for_each = containers.value.startup_probe.http_get != null ? [true] : []
               content {
                 path = containers.value.startup_probe.http_get.path
+                port = containers.value.startup_probe.http_get.port
                 dynamic "http_headers" {
                   for_each = containers.value.startup_probe.http_get.http_headers != null ? containers.value.startup_probe.http_get.http_headers : []
                   content {
@@ -156,7 +166,7 @@ resource "google_cloud_run_v2_service" "this" {
             dynamic "tcp_socket" {
               for_each = containers.value.startup_probe.tcp_socket != null ? [true] : []
               content {
-
+                port = containers.value.startup_probe.tcp_socket.port
               }
             }
           }
@@ -236,10 +246,13 @@ resource "google_cloud_run_v2_service" "this" {
       for_each = var.template.vpc_access != null ? [true] : []
       content {
         connector = var.template.vpc_access.connector
+        egress    = var.template.vpc_access.egress
         dynamic "network_interfaces" {
           for_each = var.template.vpc_access.network_interfaces != null ? var.template.vpc_access.network_interfaces : []
           content {
-            tags = network_interfaces.value.tags
+            network    = network_interfaces.value.network
+            subnetwork = network_interfaces.value.subnetwork
+            tags       = network_interfaces.value.tags
           }
         }
       }
@@ -256,6 +269,7 @@ resource "google_cloud_run_v2_service" "this" {
   dynamic "traffic" {
     for_each = var.traffic != null ? var.traffic : []
     content {
+      percent  = traffic.value.percent
       revision = traffic.value.revision
       tag      = traffic.value.tag
       type     = traffic.value.type
