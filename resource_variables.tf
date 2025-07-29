@@ -131,7 +131,7 @@ DESCRIPTION
 variable "project" {
   type     = string
   default  = null
-  nullable = true
+  # nullable = true
 }
 
 variable "binary_authorization" {
@@ -141,7 +141,7 @@ variable "binary_authorization" {
     use_default              = optional(bool)
   })
   default  = null
-  nullable = true
+  # nullable = true
 }
 
 variable "build_config" {
@@ -157,7 +157,7 @@ variable "build_config" {
     worker_pool              = optional(string)
   })
   default  = null
-  nullable = true
+  # nullable = true
 }
 
 variable "scaling" {
@@ -167,7 +167,7 @@ variable "scaling" {
     scaling_mode          = optional(string)
   })
   default  = null
-  nullable = true
+  # nullable = true
 }
 
 variable "template" {
@@ -310,7 +310,7 @@ variable "timeouts" {
     update = optional(string)
   })
   default  = null
-  nullable = true
+  # nullable = true
 }
 
 variable "traffic" {
@@ -321,5 +321,5 @@ variable "traffic" {
     type     = optional(string)
   }))
   default  = null
-  nullable = true
+  # nullable = true
 }

@@ -12,7 +12,16 @@ from flask import Flask
 
 app = Flask(__name__)
 
-logging.basicConfig(level=logging.INFO)
+### Enable Datadog Logging
+log_filename = os.environ.get(
+    "DD_SERVERLESS_LOG_PATH", "/shared-logs/logs/*.log"
+).replace("*.log", "app.log")
+os.makedirs(os.path.dirname(log_filename), exist_ok=True)
+
+logging.basicConfig(level=logging.INFO, filename=log_filename)
+### END Enable Datadog Logging
+
+# logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 @app.route("/")

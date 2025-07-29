@@ -11,9 +11,7 @@ variable "region" {
 }
 
 
-//service resource
-
-
+//google resource
 variable "name" {
   type        = string
   description = "The name of the Cloud Run service"
@@ -29,4 +27,11 @@ variable "image" {
   type        = string
   description = "The image to deploy the service to"
   default     = "us-docker.pkg.dev/cloudrun/container/hello"
+}
+
+//datadog values
+
+variable "datadog_api_key" {
+  type        = string
+  description = "The api key for datadog"
 }

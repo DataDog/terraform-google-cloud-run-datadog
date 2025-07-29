@@ -13,6 +13,22 @@ module "datadog-cloud-run-v2-wrapper" {
   name = var.name # For moving, MUST MATCH NAME PASSED INTO RESOURCE
   location = var.location
   deletion_protection = false
+  datadog = {
+    api_key = var.datadog_api_key
+    site = "datadoghq.com"
+    service = "cloudrun-tf-example-service"
+    version = "1.0.0"
+    tags = ["test:tag1"]
+    env = "serverless"
+    source = "cloudrun"
+    
+    #uses default sidecar image, name, resources, healthport
+    
+    #logging: use default logs_injection logging_volume, and logging path
+    log_level = "debug"
+    trace_enabled = true
+
+  }
 
   template = {
     labels = {
@@ -21,13 +37,6 @@ module "datadog-cloud-run-v2-wrapper" {
     volumes = [
       {
         name = "test-volume"
-        empty_dir = {
-          medium = "MEMORY"
-          size_limit = "100Mi"
-        }
-      },
-      {
-        name = "test-volume-2"
         empty_dir = {
           medium = "MEMORY"
           size_limit = "100Mi"
@@ -42,8 +51,8 @@ module "datadog-cloud-run-v2-wrapper" {
         image = var.image
         resources = {
           limits = {
-            cpu    = "1"
-            memory = "512Mi"
+            cpu    = "2"
+            memory = "1024Mi"
           }
         }
         ports = {
@@ -91,13 +100,6 @@ module "datadog-cloud-run-v2-wrapper" {
 #       }
 #     }
 
-#     volumes {
-#       name = "test-volume-2"
-#       empty_dir {
-#         medium = "MEMORY"
-#         size_limit = "100Mi"
-#       }
-#     }
 
 #     containers {
 #       name = "tf-cloudrun-python-test"
