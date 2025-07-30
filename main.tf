@@ -63,38 +63,60 @@ locals{
   # ) : [for v in local.cur_volumes: v]
 
   #sidecar env vars
-  sidecar_env_vars =[for env_var in [{ # DEBUG
-    ekey = "DD_API_KEY"
-    evalue = var.datadog.api_key # Required = API key and site
-    },
-    {ekey = "DD_SITE",
-    evalue = var.datadog.site},
-    {ekey = "DD_SERVICE",
-    evalue = var.datadog.service != null ? var.datadog.service : var.name # defaults to name of the cloud run service
-    }, 
-    # {key = "DD_VERSION",
-    # value = var.datadog.version != null ? var.datadog.version : null},
-    # var.datadog.env != null ? { # optional env
-    #   key = "DD_ENV",
-    #   value = var.datadog.env
-    # } : {key: null, value: null},
-    # var.datadog.tags != null ? { # optional tags
-    #   key = "DD_TAGS",
-    #   value = var.datadog.tags
-    # } : {key: null, value: null},
-    # var.datadog.logs_injection != null ? { # optional logs_injection, TODO: update if needed
-    #   key = "DD_LOGS_INJECTION",
-    #   value = var.datadog.logs_injection ? "true" : "false"
-    # } : {key: null, value: null},
-    # var.datadog.log_level != null ? { # optional log_level
-    #   key = "DD_LOG_LEVEL",
-    #   value = var.datadog.log_level
-    # } : {key: null, value: null},
-    # var.datadog.logs_injection == true ? { # optional logging_path, only if logs_injection is true
-    #   key = "DD_SERVERLESS_LOG_PATH",
-    #   value = var.datadog.logging_path
-    # } : {key: null, value: null}
-  ]: env_var != null && env_var.evalue != null]
+  sidecar_env_vars = concat(
+    # Required environment variables
+    [
+      {
+        var_name  = "DD_API_KEY"
+        var_value = var.datadog.api_key
+      },
+      {
+        var_name  = "DD_SITE"
+        var_value = var.datadog.site
+      },
+      {
+        var_name  = "DD_SERVICE"
+        var_value = var.datadog.service != null ? var.datadog.service : var.name
+      }
+    ],
+    # Optional environment variables - only include if values are provided
+    var.datadog.version != null ? [
+      {
+        var_name  = "DD_VERSION"
+        var_value = var.datadog.version
+      }
+    ] : [],
+    var.datadog.env != null ? [
+      {
+        var_name  = "DD_ENV"
+        var_value = var.datadog.env
+      }
+    ] : [],
+    var.datadog.tags != null ? [
+      {
+        var_name  = "DD_TAGS"
+        var_value = join(",", var.datadog.tags)
+      }
+    ] : [],
+    var.datadog.logs_injection != null ? [
+      {
+        var_name  = "DD_LOGS_INJECTION"
+        var_value = var.datadog.logs_injection ? "true" : "false"
+      }
+    ] : [],
+    var.datadog.log_level != null ? [
+      {
+        var_name  = "DD_LOG_LEVEL"
+        var_value = var.datadog.log_level
+      }
+    ] : [],
+    var.datadog.logs_injection == true ? [
+      {
+        var_name  = "DD_SERVERLESS_LOG_PATH"
+        var_value = var.datadog.logging_path
+      }
+    ] : []
+  )
 
   # TODO: what if user has a dd-sidecar container already?
   # non_sidecar_containers = var.template.containers != null ? [for container in var.template.containers : container if container.name != var.datadog.sidecar_name] : []
@@ -337,24 +359,12 @@ resource "google_cloud_run_v2_service" "this" {
       }
 
       # all env variables
-      # dynamic "env" {
-      #   for_each = toset(local.sidecar_env_vars)
-      #   content {
-      #     name  = env.value.ekey # DEBUG
-      #     value = env.value.evalue
-      #   }
-      # }
-      env {
-        name = "DD_API_KEY"
-        value = var.datadog.api_key
-      }
-      env {
-        name = "DD_SITE"
-        value = var.datadog.site
-      }
-      env {
-        name = "DD_SERVICE"
-        value = var.datadog.service != null ? var.datadog.service : var.name # defaults to name of the cloud run service
+      dynamic "env" {
+        for_each = local.sidecar_env_vars
+        content {
+          name  = env.value.var_name # DEBUG
+          value = env.value.var_value
+        }
       }
 
     }
