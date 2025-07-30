@@ -18,7 +18,7 @@ module "datadog-cloud-run-v2-wrapper" {
   dd_site = "datadoghq.com" #default
   dd_service = "cloudrun-tf-python-hello"
   dd_version = "1.0.0"
-  dd_tags = "test:tag-example"
+  dd_tags = ["test:tag-example", "test2:tag-example-2"]
   dd_env = "serverless"
   dd_source = "cloudrun"
   dd_logs_injection = true
@@ -27,6 +27,15 @@ module "datadog-cloud-run-v2-wrapper" {
   dd_sidecar = {
     build_from_scratch = true
     #uses default sidecar image, name, resources, healthport
+    image = "gcr.io/datadoghq/serverless-init:latest"
+    name = "datadog-sidecar"
+    resources = {
+      limits = {
+        cpu = "1"
+        memory = "512Mi"
+      }
+    }
+    health_port = 5555
   }
 
   template = {
