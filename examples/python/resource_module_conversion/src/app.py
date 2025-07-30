@@ -21,7 +21,7 @@ os.makedirs(os.path.dirname(log_filename), exist_ok=True)
 logging.basicConfig(level=logging.INFO, filename=log_filename)
 ### END Enable Datadog Logging
 
-# logging.basicConfig(level=logging.INFO)
+# logging.basicConfig(level=logging.INFO) #line to replace if originally logigng without datadog
 logger = logging.getLogger(__name__)
 
 @app.route("/")

@@ -18,7 +18,7 @@ module "datadog-cloud-run-v2-wrapper" {
   dd_site = "datadoghq.com" #default
   dd_service = "cloudrun-tf-python-hello"
   dd_version = "1.0.0"
-  dd_tags = ["test:tag-example", "test2:tag-example-2"]
+  dd_tags = ["test:tag-example", "foo:tag-example-2"]
   dd_env = "serverless"
   dd_source = "cloudrun"
   dd_logs_injection = true
@@ -141,8 +141,8 @@ module "datadog-cloud-run-v2-wrapper" {
 # }
  
 moved{
-  ## moving from resource to module
-  from = google_cloud_run_v2_service.datadog-cloud-run-service
+  ## moving from resource to module, name parameter passed into Datadog module must be the same as name passed into resource!!
+  from = google_cloud_run_v2_service.datadog-cloud-run-service 
   to = module.datadog-cloud-run-v2-wrapper.google_cloud_run_v2_service.this
 
   ## moving from module to resource
