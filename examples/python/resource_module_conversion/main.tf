@@ -13,21 +13,20 @@ module "datadog-cloud-run-v2-wrapper" {
   name = var.name # For moving, MUST MATCH NAME PASSED INTO RESOURCE
   location = var.location
   deletion_protection = false
-  datadog = {
-    api_key = var.datadog_api_key
-    site = "datadoghq.com"
-    service = "cloudrun-tf-example-service"
-    version = "1.0.0"
-    tags = ["test:tag1"]
-    env = "serverless"
-    source = "cloudrun"
-    
-    #uses default sidecar image, name, resources, healthport
-    
-    #logging: use default logs_injection logging_volume, and logging path
-    log_level = "debug"
-    trace_enabled = true
 
+  dd_api_key = var.datadog_api_key
+  dd_site = "datadoghq.com" #default
+  dd_service = "cloudrun-tf-python-hello"
+  dd_version = "1.0.0"
+  dd_tags = "test:tag-example"
+  dd_env = "serverless"
+  dd_source = "cloudrun"
+  dd_logs_injection = true
+  dd_logging_path = "/shared-volume/logs/*.log"
+
+  dd_sidecar = {
+    build_from_scratch = true
+    #uses default sidecar image, name, resources, healthport
   }
 
   template = {
@@ -51,8 +50,8 @@ module "datadog-cloud-run-v2-wrapper" {
         image = var.image
         resources = {
           limits = {
-            cpu    = "2"
-            memory = "1024Mi"
+            cpu    = "1"
+            memory = "512Mi"
           }
         }
         ports = {

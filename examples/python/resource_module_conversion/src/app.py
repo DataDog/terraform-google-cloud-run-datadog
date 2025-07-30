@@ -14,7 +14,7 @@ app = Flask(__name__)
 
 ### Enable Datadog Logging
 log_filename = os.environ.get(
-    "DD_SERVERLESS_LOG_PATH", "/shared-logs/logs/*.log"
+    "DD_SERVERLESS_LOG_PATH", "/shared-volume/logs/*.log"
 ).replace("*.log", "app.log")
 os.makedirs(os.path.dirname(log_filename), exist_ok=True)
 
@@ -25,7 +25,7 @@ logging.basicConfig(level=logging.INFO, filename=log_filename)
 logger = logging.getLogger(__name__)
 
 @app.route("/")
-# @tracer.wrap(service="cloudrun-tf-python-integration", resource="hellohelp")
+# @tracer.wrap(service="cloudrun-tf-python-hello", resource="wrapper-module-test")
 def hello_world():
     # datadog.statsd.distribution("cloudrun-py-sample-metric", 1)
     logger.info("Hello Datadog logger using Python!")
