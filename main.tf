@@ -33,12 +33,6 @@ variable "dd_tags" {
   default = null
 }
 
-variable "dd_source" {
-  type = string
-  description = "Datadog source"
-  default = null
-}
-
 variable "dd_logs_injection" {
   type = bool
   description = "Datadog logs injection, default true, will inject logs to Datadog dashboard, make sure to provide both shared_volume and logging_path"
