@@ -3,7 +3,6 @@
 variable "annotations" {
   type        = map(string)
   default     = null
-  nullable    = true
   description = <<DESCRIPTION
 Unstructured key value map that may be set by external tools to store and arbitrary metadata. They are not queryable and should be preserved when modifying objects.
 
@@ -20,7 +19,6 @@ DESCRIPTION
 variable "client" {
   type        = string
   default     = null
-  nullable    = true
   description = <<DESCRIPTION
 Arbitrary identifier for the API client.
 DESCRIPTION
@@ -29,7 +27,6 @@ DESCRIPTION
 variable "client_version" {
   type        = string
   default     = null
-  nullable    = true
   description = <<DESCRIPTION
 Arbitrary version identifier for the API client.
 DESCRIPTION
@@ -38,7 +35,6 @@ DESCRIPTION
 variable "custom_audiences" {
   type        = list(string)
   default     = null
-  nullable    = true
   description = <<DESCRIPTION
 One or more custom audiences that you want this service to support. Specify each custom audience as the full URL in a string. The custom audiences are encoded in the token and used to authenticate requests.
 For more information, see https://cloud.google.com/run/docs/configuring/custom-audiences.
@@ -48,7 +44,6 @@ DESCRIPTION
 variable "deletion_protection" {
   type        = bool
   default     = null
-  nullable    = true
   description = <<DESCRIPTION
 Whether Terraform will be prevented from destroying the service. Defaults to true.
 When a'terraform destroy' or 'terraform apply' would delete the service,
@@ -62,7 +57,6 @@ DESCRIPTION
 variable "description" {
   type        = string
   default     = null
-  nullable    = true
   description = <<DESCRIPTION
 User-provided description of the Service. This field currently has a 512-character limit.
 DESCRIPTION
@@ -71,7 +65,6 @@ DESCRIPTION
 variable "ingress" {
   type        = string
   default     = null
-  nullable    = true
   description = <<DESCRIPTION
 Provides the ingress settings for this Service. On output, returns the currently observed ingress settings, or INGRESS_TRAFFIC_UNSPECIFIED if no revision is active. Possible values: ["INGRESS_TRAFFIC_ALL", "INGRESS_TRAFFIC_INTERNAL_ONLY", "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"]
 DESCRIPTION
@@ -80,7 +73,6 @@ DESCRIPTION
 variable "invoker_iam_disabled" {
   type        = bool
   default     = null
-  nullable    = true
   description = <<DESCRIPTION
 Disables IAM permission check for run.routes.invoke for callers of this service. For more information, visit https://cloud.google.com/run/docs/securing/managing-access#invoker_check.
 DESCRIPTION
@@ -89,7 +81,6 @@ DESCRIPTION
 variable "labels" {
   type        = map(string)
   default     = null
-  nullable    = true
   description = <<DESCRIPTION
 Unstructured key value map that can be used to organize and categorize objects. User-provided labels are shared with Google's billing system, so they can be used to filter, or break down billing charges by team, component,
 environment, state, etc. For more information, visit https://cloud.google.com/resource-manager/docs/creating-managing-labels or https://cloud.google.com/run/docs/configuring/labels.
@@ -105,7 +96,6 @@ DESCRIPTION
 variable "launch_stage" {
   type        = string
   default     = null
-  nullable    = true
   description = <<DESCRIPTION
 The launch stage as defined by [Google Cloud Platform Launch Stages](https://cloud.google.com/products#product-launch-stages). Cloud Run supports ALPHA, BETA, and GA.
 If no value is specified, GA is assumed. Set the launch stage to a preview stage on input to allow use of preview features in that stage. On read (or output), describes whether the resource uses preview features.
@@ -116,6 +106,7 @@ DESCRIPTION
 
 variable "location" {
   type        = string
+  nullable    = false
   description = <<DESCRIPTION
 The location of the cloud run service
 DESCRIPTION
@@ -123,15 +114,15 @@ DESCRIPTION
 
 variable "name" {
   type        = string
+  nullable    = false
   description = <<DESCRIPTION
 Name of the Service.
 DESCRIPTION
 }
 
 variable "project" {
-  type     = string
-  default  = null
-  # nullable = true
+  type    = string
+  default = null
 }
 
 variable "binary_authorization" {
@@ -140,8 +131,7 @@ variable "binary_authorization" {
     policy                   = optional(string),
     use_default              = optional(bool)
   })
-  default  = null
-  # nullable = true
+  default = null
 }
 
 variable "build_config" {
@@ -151,13 +141,11 @@ variable "build_config" {
     environment_variables    = optional(map(string)),
     function_target          = optional(string),
     image_uri                = optional(string),
-    name                     = string,
     service_account          = optional(string),
     source_location          = optional(string),
     worker_pool              = optional(string)
   })
-  default  = null
-  # nullable = true
+  default = null
 }
 
 variable "scaling" {
@@ -166,8 +154,7 @@ variable "scaling" {
     min_instance_count    = optional(number),
     scaling_mode          = optional(string)
   })
-  default  = null
-  # nullable = true
+  default = null
 }
 
 variable "template" {
@@ -301,6 +288,7 @@ variable "template" {
       })))
     }))
   })
+  nullable = false
 }
 
 variable "timeouts" {
@@ -309,8 +297,7 @@ variable "timeouts" {
     delete = optional(string),
     update = optional(string)
   })
-  default  = null
-  # nullable = true
+  default = null
 }
 
 variable "traffic" {
@@ -320,6 +307,5 @@ variable "traffic" {
     tag      = optional(string),
     type     = optional(string)
   }))
-  default  = null
-  # nullable = true
+  default = null
 }
