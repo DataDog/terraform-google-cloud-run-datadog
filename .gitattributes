@@ -1,0 +1,4 @@
+outputs.tf linguist-generated=true
+resource_impl.tf linguist-generated=true
+resource_variables.tf linguist-generated=true
+versions.tf linguist-generated=true
