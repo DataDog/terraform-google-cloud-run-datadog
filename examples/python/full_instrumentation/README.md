@@ -11,7 +11,7 @@ You will define your Docker image path after building it in the next step.
 
 ### 2. Build and push the Docker image
 
-Navigate to the `src/` subdirectory and build + push your application image to your Google Artifact Registry (or Container Registry) using the command line.
+Navigate to the `src/` subdirectory and build + push your application image to your Google Artifact Registry (or Container Registry) using the command line. If you don't have a registry, please go create one.
 
 #### Authenticate to Google Cloud
 
@@ -21,25 +21,6 @@ gcloud auth login
 
 Make sure you're logged in and have access to push to your registry.
 
-#### Create an Artifact Registry (if not created already)
-
-```
-# Set environment variables
-PROJECT_ID=<your-project-id>
-REGION="europe-west1"
-REPO_NAME="cloud-run-source-deploy"
-IMAGE_NAME="hello_world_image"
-
-# Enable required API
-gcloud services enable artifactregistry.googleapis.com
-
-# Create the Docker repository
-gcloud artifacts repositories create $REPO_NAME \
-  --repository-format=docker \
-  --location=$REGION \
-  --description="Docker repo for Cloud Run apps"
-```
-
 #### Build the Docker image
 ```
 docker buildx build \
@@ -48,7 +29,7 @@ docker buildx build \
   .
 ```
 
-#### Push image to the artiface Registry
+#### Push image to the artifact registry
 ```
 docker push $REGION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/$IMAGE_NAME:latest
 ```
@@ -68,4 +49,4 @@ terraform init
 terraform plan
 terrafrom apply
 ```
-Your Python app is now fully instrumented with the Datadog sidecar agent. Tracing, logging, and metrics metrics will be visible in Datadog Serverless Monitoring.
+Your Python app is now fully instrumented with the Datadog sidecar agent. Tracing, logging, and metrics will be visible in Datadog Serverless Monitoring.

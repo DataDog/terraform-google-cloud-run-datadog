@@ -19,7 +19,6 @@ module "datadog-cloud-run-v2-wrapper" {
   dd_logging_path = "/shared-volume/logs/*.log"
 
   dd_sidecar = {
-    build_from_scratch = true
     #uses default sidecar image, name, resources, healthport
     image = "gcr.io/datadoghq/serverless-init:latest"
     name = "datadog-sidecar"
@@ -62,7 +61,7 @@ module "datadog-cloud-run-v2-wrapper" {
         }
         env = [
           {
-            name = "MY_ENV_VAR"
+            name = "MY_ENV_VAR1"
             value = "my_value"
           },
           {
