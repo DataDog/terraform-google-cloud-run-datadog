@@ -8,4 +8,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 EXPOSE 8080
 
 # Apply the auto-instrumentation provided by the ddtrace dependency.
-CMD ["python", "app.py"]
+CMD ["ddtrace-run", "python", "app.py"]
