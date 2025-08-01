@@ -97,16 +97,7 @@ locals{
   }
 
   # TODO: figure out how to handle case if shared_volume is already in the template volumes and type-safety the tuple conversion
-  # cur_volumes = var.template.volumes != null ? var.template.volumes : []
-  # without_sidecar_volumes = [for vol in local.cur_volumes: vol if vol.name != local.dd_logging_vol.name]
-  
-  # new_volumes = var.datadog.logs_injection ? concat( #add the shared volume to the template volumes if logs_injection is true
-  #   local.without_sidecar_volumes,
-  #   [local.dd_logging_vol]
-  # ) : [for v in local.cur_volumes: v]
-
   # TODO: what if user has a dd-sidecar container already?
-  # non_sidecar_containers = var.template.containers != null ? [for container in var.template.containers : container if container.name != var.datadog.sidecar_name] : []
 
   #Sidecar env vars
   required_sidecar_env_vars = [ #api, site, service, and healthport are always existing
@@ -225,7 +216,7 @@ resource "google_cloud_run_v2_service" "this" {
         working_dir    = containers.value.working_dir
         
         # User-provided resource environment variables
-        dynamic "env" { #for each  container, if instrumenting with datadog and a service name is provided, add this as a 
+        dynamic "env" {
           for_each = containers.value.env != null ? containers.value.env : []
           content {
             name  = env.value.name
@@ -245,8 +236,7 @@ resource "google_cloud_run_v2_service" "this" {
           }
         }
 
-        #### Start of manual instrumentation insertion ####
-        # Datadog environment variables, only service required
+        # Configure DD_SERVICE and volume mounts on application container
         env {
           name = "DD_SERVICE"
           value = var.dd_service != null ? var.dd_service : var.name # defaults to name of the cloud run service
@@ -258,7 +248,6 @@ resource "google_cloud_run_v2_service" "this" {
             mount_path = var.dd_shared_volume.mount_path
           }
         }
-        #### End of manual instrumentation insertion ####
         
         dynamic "liveness_probe" {
           for_each = containers.value.liveness_probe != null ? [true] : []
@@ -357,7 +346,7 @@ resource "google_cloud_run_v2_service" "this" {
       }
     }
 
-    # makes the sidecar container
+    # Create the sidecar container
     containers {
       name = var.dd_sidecar.name
       image = var.dd_sidecar.image
@@ -365,8 +354,6 @@ resource "google_cloud_run_v2_service" "this" {
         for_each = var.dd_sidecar.resources != null ? [true] : []
         content {
           limits = var.dd_sidecar.resources.limits
-          # cpu_idle = var.datadog.sidecar_resources.cpu_idle
-          # startup_cpu_boost = var.datadog.sidecar_resources.startup_cpu_boost
         }
       }
       dynamic "volume_mounts" {
@@ -461,7 +448,7 @@ resource "google_cloud_run_v2_service" "this" {
       }
     }
 
-    # MANUAL INSTRUMENTATION INSERTION: add the shared volume to the template volumes if logs_injection is true
+    # If logs_injection is true, add the shared volume to the template volumes
     dynamic "volumes" {
       for_each = var.dd_logs_injection == true ? [true] : []
       content {
