@@ -236,6 +236,7 @@ resource "google_cloud_run_v2_service" "this" {
           }
         }
 
+        # NOTE: Assumes user has not provided any sidecar container, shared volume, or logging details to pass into the module and module is instrumenting everything
         # Configure DD_SERVICE and volume mounts on application container
         env {
           name = "DD_SERVICE"
@@ -347,6 +348,7 @@ resource "google_cloud_run_v2_service" "this" {
     }
 
     # Create the sidecar container
+    # NOTE: Assumes user has not provided any sidecar container, shared volume, or logging details to pass into the module and module is instrumenting everything
     containers {
       name = var.dd_sidecar.name
       image = var.dd_sidecar.image
@@ -448,6 +450,7 @@ resource "google_cloud_run_v2_service" "this" {
       }
     }
 
+    # NOTE: Assumes user has not provided any sidecar container, shared volume, or logging details to pass into the module and module is instrumenting everything
     # If logs_injection is true, add the shared volume to the template volumes
     dynamic "volumes" {
       for_each = var.dd_logs_injection == true ? [true] : []
