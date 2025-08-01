@@ -68,7 +68,6 @@ variable "dd_shared_volume" {
 
 variable "dd_sidecar" {
   type = object({
-    build_from_scratch = bool # if true, will build the sidecar image because user doesn't provide any sidecar, tracing, or logging details in their current deployment yet
     image = optional(string, "gcr.io/datadoghq/serverless-init:latest")
     name  = optional(string, "datadog-sidecar")
     resources = optional(object({
@@ -160,14 +159,6 @@ locals{
 
 }
 
-check "no_existing_sidecar"{
-  # current assumption is user leaves it completely to our module instrument with Datadog, has no shared volume for logging or declaration for sidecar container yet
-  assert{
-    condition = var.dd_sidecar.build_from_scratch == true
-    error_message = "User must provide build_from_scratch = true and ensure they have no sidecar container, shared volume, or logging details passed into the module"
-  }
-}
-
 resource "google_cloud_run_v2_service" "this" {
   annotations          = var.annotations
   client               = var.client
@@ -198,7 +189,6 @@ resource "google_cloud_run_v2_service" "this" {
       environment_variables    = var.build_config.environment_variables
       function_target          = var.build_config.function_target
       image_uri                = var.build_config.image_uri
-      # name                     = var.build_config.name
       service_account          = var.build_config.service_account
       source_location          = var.build_config.source_location
       worker_pool              = var.build_config.worker_pool
