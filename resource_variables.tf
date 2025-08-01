@@ -3,7 +3,6 @@
 variable "annotations" {
   type        = map(string)
   default     = null
-  nullable    = true
   description = <<DESCRIPTION
 Unstructured key value map that may be set by external tools to store and arbitrary metadata. They are not queryable and should be preserved when modifying objects.
 
@@ -20,7 +19,6 @@ DESCRIPTION
 variable "client" {
   type        = string
   default     = null
-  nullable    = true
   description = <<DESCRIPTION
 Arbitrary identifier for the API client.
 DESCRIPTION
@@ -29,7 +27,6 @@ DESCRIPTION
 variable "client_version" {
   type        = string
   default     = null
-  nullable    = true
   description = <<DESCRIPTION
 Arbitrary version identifier for the API client.
 DESCRIPTION
@@ -38,7 +35,6 @@ DESCRIPTION
 variable "custom_audiences" {
   type        = list(string)
   default     = null
-  nullable    = true
   description = <<DESCRIPTION
 One or more custom audiences that you want this service to support. Specify each custom audience as the full URL in a string. The custom audiences are encoded in the token and used to authenticate requests.
 For more information, see https://cloud.google.com/run/docs/configuring/custom-audiences.
@@ -48,7 +44,6 @@ DESCRIPTION
 variable "deletion_protection" {
   type        = bool
   default     = null
-  nullable    = true
   description = <<DESCRIPTION
 Whether Terraform will be prevented from destroying the service. Defaults to true.
 When a'terraform destroy' or 'terraform apply' would delete the service,
@@ -62,7 +57,6 @@ DESCRIPTION
 variable "description" {
   type        = string
   default     = null
-  nullable    = true
   description = <<DESCRIPTION
 User-provided description of the Service. This field currently has a 512-character limit.
 DESCRIPTION
@@ -71,7 +65,6 @@ DESCRIPTION
 variable "ingress" {
   type        = string
   default     = null
-  nullable    = true
   description = <<DESCRIPTION
 Provides the ingress settings for this Service. On output, returns the currently observed ingress settings, or INGRESS_TRAFFIC_UNSPECIFIED if no revision is active. Possible values: ["INGRESS_TRAFFIC_ALL", "INGRESS_TRAFFIC_INTERNAL_ONLY", "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"]
 DESCRIPTION
@@ -80,7 +73,6 @@ DESCRIPTION
 variable "invoker_iam_disabled" {
   type        = bool
   default     = null
-  nullable    = true
   description = <<DESCRIPTION
 Disables IAM permission check for run.routes.invoke for callers of this service. For more information, visit https://cloud.google.com/run/docs/securing/managing-access#invoker_check.
 DESCRIPTION
@@ -89,7 +81,6 @@ DESCRIPTION
 variable "labels" {
   type        = map(string)
   default     = null
-  nullable    = true
   description = <<DESCRIPTION
 Unstructured key value map that can be used to organize and categorize objects. User-provided labels are shared with Google's billing system, so they can be used to filter, or break down billing charges by team, component,
 environment, state, etc. For more information, visit https://cloud.google.com/resource-manager/docs/creating-managing-labels or https://cloud.google.com/run/docs/configuring/labels.
@@ -105,7 +96,6 @@ DESCRIPTION
 variable "launch_stage" {
   type        = string
   default     = null
-  nullable    = true
   description = <<DESCRIPTION
 The launch stage as defined by [Google Cloud Platform Launch Stages](https://cloud.google.com/products#product-launch-stages). Cloud Run supports ALPHA, BETA, and GA.
 If no value is specified, GA is assumed. Set the launch stage to a preview stage on input to allow use of preview features in that stage. On read (or output), describes whether the resource uses preview features.
@@ -116,6 +106,7 @@ DESCRIPTION
 
 variable "location" {
   type        = string
+  nullable    = false
   description = <<DESCRIPTION
 The location of the cloud run service
 DESCRIPTION
@@ -123,15 +114,15 @@ DESCRIPTION
 
 variable "name" {
   type        = string
+  nullable    = false
   description = <<DESCRIPTION
 Name of the Service.
 DESCRIPTION
 }
 
 variable "project" {
-  type     = string
-  default  = null
-  nullable = true
+  type    = string
+  default = null
 }
 
 variable "binary_authorization" {
@@ -140,8 +131,7 @@ variable "binary_authorization" {
     policy                   = optional(string),
     use_default              = optional(bool)
   })
-  default  = null
-  nullable = true
+  default = null
 }
 
 variable "build_config" {
@@ -155,8 +145,7 @@ variable "build_config" {
     source_location          = optional(string),
     worker_pool              = optional(string)
   })
-  default  = null
-  nullable = true
+  default = null
 }
 
 variable "scaling" {
@@ -165,19 +154,21 @@ variable "scaling" {
     min_instance_count    = optional(number),
     scaling_mode          = optional(string)
   })
-  default  = null
-  nullable = true
+  default = null
 }
 
 variable "template" {
   type = object({
-    annotations                   = optional(map(string)),
-    encryption_key                = optional(string),
-    execution_environment         = optional(string),
-    gpu_zonal_redundancy_disabled = optional(bool),
-    labels                        = optional(map(string)),
-    revision                      = optional(string),
-    session_affinity              = optional(bool),
+    annotations                      = optional(map(string)),
+    encryption_key                   = optional(string),
+    execution_environment            = optional(string),
+    gpu_zonal_redundancy_disabled    = optional(bool),
+    labels                           = optional(map(string)),
+    max_instance_request_concurrency = optional(number),
+    revision                         = optional(string),
+    service_account                  = optional(string),
+    session_affinity                 = optional(bool),
+    timeout                          = optional(string),
     containers = optional(list(object({
       args           = optional(list(string)),
       base_image_uri = optional(string),
@@ -202,10 +193,12 @@ variable "template" {
         period_seconds        = optional(number),
         timeout_seconds       = optional(number),
         grpc = optional(object({
+          port    = optional(number),
           service = optional(string)
         })),
         http_get = optional(object({
           path = optional(string),
+          port = optional(number),
           http_headers = optional(list(object({
             name  = string,
             value = optional(string)
@@ -216,10 +209,12 @@ variable "template" {
         }))
       })),
       ports = optional(object({
-        container_port = optional(number)
+        container_port = optional(number),
+        name           = optional(string)
       })),
       resources = optional(object({
         cpu_idle          = optional(bool),
+        limits            = optional(map(string)),
         startup_cpu_boost = optional(bool)
       })),
       startup_probe = optional(object({
@@ -228,17 +223,19 @@ variable "template" {
         period_seconds        = optional(number),
         timeout_seconds       = optional(number),
         grpc = optional(object({
+          port    = optional(number),
           service = optional(string)
         })),
         http_get = optional(object({
           path = optional(string),
+          port = optional(number),
           http_headers = optional(list(object({
             name  = string,
             value = optional(string)
           })))
         })),
         tcp_socket = optional(object({
-
+          port = optional(number)
         }))
       })),
       volume_mounts = optional(list(object({
@@ -283,11 +280,15 @@ variable "template" {
     }))),
     vpc_access = optional(object({
       connector = optional(string),
+      egress    = optional(string),
       network_interfaces = optional(list(object({
-        tags = optional(list(string))
+        network    = optional(string),
+        subnetwork = optional(string),
+        tags       = optional(list(string))
       })))
     }))
   })
+  nullable = false
 }
 
 variable "timeouts" {
@@ -296,16 +297,15 @@ variable "timeouts" {
     delete = optional(string),
     update = optional(string)
   })
-  default  = null
-  nullable = true
+  default = null
 }
 
 variable "traffic" {
   type = list(object({
+    percent  = optional(number),
     revision = optional(string),
     tag      = optional(string),
     type     = optional(string)
   }))
-  default  = null
-  nullable = true
+  default = null
 }
