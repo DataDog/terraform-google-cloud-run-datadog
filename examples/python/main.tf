@@ -4,19 +4,21 @@ provider "google" {
 }
 
 module "datadog-cloud-run-v2-wrapper" {
-  source = "../../../"
+  source = "../../"
   name = var.name
   location = var.location
   deletion_protection = false
 
   dd_api_key = var.datadog_api_key
-  dd_site = "datadoghq.com" #default
+  dd_site = "datadoghq.com"
   dd_service = "cloudrun-tf-python-hello"
   dd_version = "1.0.0"
   dd_tags = ["test:tag-example", "foo:tag-example-2"]
   dd_env = "serverless"
-  dd_logs_injection = true
+  dd_enable_logging = true
+  dd_log_level = "debug"
   dd_logging_path = "/shared-volume/logs/*.log"
+
 
   dd_sidecar = {
     #uses default sidecar image, name, resources, healthport
@@ -33,7 +35,7 @@ module "datadog-cloud-run-v2-wrapper" {
 
   template = {
     labels = {
-      "my_label" = "test_wrapper_with_all_fields"
+      "my_label" = "test_label"
     }
     volumes = [
       {
@@ -76,6 +78,14 @@ module "datadog-cloud-run-v2-wrapper" {
       max_instance_count = 1
     }
   }
+
+  traffic = [
+    {
+      percent = 100
+      type = "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"
+    }
+  ]
+
   scaling = {
     min_instance_count = 1
 
