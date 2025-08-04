@@ -1,12 +1,14 @@
 variable "dd_api_key" {
   type = string
   description = "Datadog API key"
+  nullable = false
 }
 
 variable "dd_site" {
   type = string
   description = "Datadog site"
   default = "datadoghq.com"
+  nullable = false
 }
 
 variable "dd_service" {
@@ -33,9 +35,9 @@ variable "dd_tags" {
   default = null
 }
 
-variable "dd_logs_injection" {
+variable "dd_enable_logging" {
   type = bool
-  description = "Datadog logs injection, default true, will inject logs to Datadog dashboard, make sure to provide both shared_volume and logging_path"
+  description = "Enables logging to show up in Datadog Serverless Monitoring, default true, make sure to provide both shared_volume and logging_path"
   default = true
 }
 
@@ -134,15 +136,15 @@ locals{
         env_value = join(",", var.dd_tags)
       }
     ] : [],
-    var.dd_logs_injection != null ? [{
+    var.dd_enable_logging == true ? [{ # always enable logs injection if logging is enabled
       env_name = "DD_LOGS_INJECTION"
-      env_value = var.dd_logs_injection ? "true" : "false"
+      env_value = var.dd_enable_logging ? "true" : "false"
     }] : [],
     var.dd_log_level != null ? [{
       env_name = "DD_LOG_LEVEL"
       env_value = var.dd_log_level
     }] : [],
-    var.dd_logs_injection == true ? [{
+    var.dd_enable_logging == true ? [{
       env_name = "DD_SERVERLESS_LOG_PATH"
       env_value = var.dd_logging_path
     }] : [],
@@ -242,8 +244,8 @@ resource "google_cloud_run_v2_service" "this" {
           name = "DD_SERVICE"
           value = var.dd_service != null ? var.dd_service : var.name # defaults to name of the cloud run service
         }
-        dynamic "volume_mounts" { # add the shared volume to the container if logs_injection is true
-          for_each = var.dd_logs_injection == true ? [true] : []
+        dynamic "volume_mounts" { # add the shared volume to the container if logging is enabled
+          for_each = var.dd_enable_logging == true ? [true] : []
           content {
             name       = var.dd_shared_volume.name
             mount_path = var.dd_shared_volume.mount_path
@@ -358,8 +360,8 @@ resource "google_cloud_run_v2_service" "this" {
           limits = var.dd_sidecar.resources.limits
         }
       }
-      dynamic "volume_mounts" {
-        for_each = var.dd_logs_injection == true ? [true] : []
+      dynamic "volume_mounts" { # add the shared volume to the sidecar if logging is enabled
+        for_each = var.dd_enable_logging == true ? [true] : []
         content {
           name = var.dd_shared_volume.name
           mount_path = var.dd_shared_volume.mount_path
@@ -451,9 +453,9 @@ resource "google_cloud_run_v2_service" "this" {
     }
 
     # NOTE: Assumes user has not provided any sidecar container, shared volume, or logging details to pass into the module and module is instrumenting everything
-    # If logs_injection is true, add the shared volume to the template volumes
+    # If enable_logging is true, add the shared volume to the template volumes
     dynamic "volumes" {
-      for_each = var.dd_logs_injection == true ? [true] : []
+      for_each = var.dd_enable_logging == true ? [true] : []
       content {
         name = var.dd_shared_volume.name
         empty_dir {
