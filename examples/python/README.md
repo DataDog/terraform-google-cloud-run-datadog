@@ -92,4 +92,6 @@ Your Python app is now fully instrumented with the Datadog sidecar agent. Tracin
 | Name | Description |
 |------|-------------|
 | <a name="output_cloud_run_service_name"></a> [cloud\_run\_service\_name](#output\_cloud\_run\_service\_name) | Name of the Cloud Run service found on Datadog Serverless Monitoring. |
+| <a name="output_service_containers"></a> [service\_containers](#output\_service\_containers) | List of containers in the Cloud Run service. |
+| <a name="output_service_volumes"></a> [service\_volumes](#output\_service\_volumes) | List of volumes in the Cloud Run service. |
 <!-- END_TF_DOCS -->

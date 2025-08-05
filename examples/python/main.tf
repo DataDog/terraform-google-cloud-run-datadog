@@ -18,6 +18,10 @@ module "datadog-cloud-run-v2-wrapper" {
   dd_enable_logging = true
   dd_log_level = "debug"
   dd_logging_path = "/shared-volume/logs/*.log"
+  dd_shared_volume = {
+    name = "dd-shared-volume"
+    mount_path = "/shared-volume"
+  }
 
 
   dd_sidecar = {
@@ -45,7 +49,6 @@ module "datadog-cloud-run-v2-wrapper" {
           size_limit = "100Mi"
         }
       },
-
     ]
 
     containers = [
@@ -69,7 +72,6 @@ module "datadog-cloud-run-v2-wrapper" {
           {
             name = "ANOTHER_ENV_VAR"
           }
-        
         ]
       },
     ]

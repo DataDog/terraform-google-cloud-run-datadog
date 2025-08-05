@@ -8,4 +8,7 @@ output "service_containers" {
   value = module.datadog-cloud-run-v2-wrapper.template[0].containers
 }
 
-
+output "service_volumes" {
+  description = "List of volumes in the Cloud Run service."
+  value = module.datadog-cloud-run-v2-wrapper.template[0].volumes
+}
