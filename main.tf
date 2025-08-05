@@ -110,6 +110,15 @@ locals{
   ] : []
 
   # TODO: check if sidecar container already exists and remove it from the var.template.containers list if it does (to be overridden by module's instantiation)
+  already_has_sidecar = var.template.containers != null ? length([
+    for c in var.template.containers : c.image
+    if strcontains(c.image, "gcr.io/datadoghq/serverless-init")
+  ]) > 0 : false
+  # if sidecar exists, exclude it from the template.containers list
+  containers_without_sidecar = var.template.containers != null ? [
+    for c in var.template.containers : c
+    if !strcontains(c.image, "gcr.io/datadoghq/serverless-init")
+  ] : []
   
   # TODO: check for each main container the volume mounts and if logging is enabled andthe shared volume is mounted, do not mount it again
 
@@ -174,6 +183,12 @@ check "logging_volume_already_exists" {
   }
 }
 
+check "sidecar_already_exists" {
+  assert {
+    condition = local.already_has_sidecar == false
+    error_message = "A sidecar container using the Datadog agent image \"gcr.io/datadoghq/serverless-init...\" already exists in the var.template.containers list. This module will override the existing sidecar container with the settings provided in var.dd_sidecar."
+  }
+}
 
 resource "google_cloud_run_v2_service" "this" {
   annotations          = var.annotations
@@ -230,7 +245,7 @@ resource "google_cloud_run_v2_service" "this" {
     session_affinity                 = var.template.session_affinity
     timeout                          = var.template.timeout
     dynamic "containers" {
-      for_each = var.template.containers != null ? var.template.containers : []
+      for_each = local.containers_without_sidecar != null ? local.containers_without_sidecar : []
       content {
         args           = containers.value.args
         base_image_uri = containers.value.base_image_uri
