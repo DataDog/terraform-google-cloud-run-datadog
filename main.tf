@@ -98,18 +98,18 @@ locals{
     }
   }
 
-  # TODO: flag if logging is enabled and shared_volume is already in the template volumes (name of volume exists)
+  # User-check 1: flag if logging is enabled and shared_volume is already in the template volumes (name of volume exists)
   shared_volume_already_exists = var.template.volumes != null && var.dd_enable_logging == true ? length([
     for v in var.template.volumes : v.name
     if v.name == var.dd_shared_volume.name
   ]) > 0 : false
-  #use this to override user's var.template.volumes if shared_volume already exists and logging is enabled
-  volumes_without_shared_volume = var.template.volumes != null && var.dd_enable_logging == true ? [
+  #use this to override user's var.template.volumes and remove the shared volume if shared_volume already exists and logging is enabled, else keep user's volumes
+  volumes_without_shared_volume = var.template.volumes != null ? (var.dd_enable_logging == true ? [
     for v in var.template.volumes : v
     if v.name != var.dd_shared_volume.name
-  ] : []
+  ] : var.template.volumes) : []
 
-  # TODO: check if sidecar container already exists and remove it from the var.template.containers list if it does (to be overridden by module's instantiation)
+  # User-check 2: check if sidecar container already exists and remove it from the var.template.containers list if it does (to be overridden by module's instantiation)
   already_has_sidecar = var.template.containers != null ? length([
     for c in var.template.containers : c.image
     if strcontains(c.image, "gcr.io/datadoghq/serverless-init")
@@ -120,8 +120,6 @@ locals{
     if !strcontains(c.image, "gcr.io/datadoghq/serverless-init")
   ] : []
   
-  # TODO: check for each main container the volume mounts and if logging is enabled andthe shared volume is mounted, do not mount it again
-
 
 
 
@@ -377,8 +375,13 @@ resource "google_cloud_run_v2_service" "this" {
             }
           }
         }
-        dynamic "volume_mounts" {
-          for_each = containers.value.volume_mounts != null ? containers.value.volume_mounts : []
+
+      # User-check 3: check for each provided container the volume mounts and if logging is enabled and the shared volume is an input, do not mount it again
+      dynamic "volume_mounts" {
+        for_each = containers.value.volume_mounts != null ? (var.dd_enable_logging == true ? [
+                                                              for vm in containers.value.volume_mounts :
+                                                              vm if !(vm.name == var.dd_shared_volume.name && vm.mount_path == var.dd_shared_volume.mount_path)
+                                                            ]  : containers.value.volume_mounts) : []
           content {
             mount_path = volume_mounts.value.mount_path
             name       = volume_mounts.value.name
@@ -388,7 +391,7 @@ resource "google_cloud_run_v2_service" "this" {
     }
 
     # Create the sidecar container
-    # NOTE: User can have provided shared volume; provided any sidecar container, or logging details to pass into the module and module is instrumenting everything
+    # NOTE: User can have provided shared volume, a sidecar container, or logging details to pass into the module and module overrides it, instruments everything
     containers {
       name = var.dd_sidecar.name
       image = var.dd_sidecar.image
