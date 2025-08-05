@@ -113,7 +113,7 @@ locals {
   }
 
   # TODO: figure out how to handle case if shared_volume is already in the template volumes and type-safety the tuple conversion
-  # TODO: what if user has a datadog-sidecar container already?
+  # TODO: what if user has a dd-sidecar container already?
 
   #Sidecar env vars
   required_sidecar_env_vars = [ #api, site, service, and healthport are always existing
@@ -258,7 +258,7 @@ resource "google_cloud_run_v2_service" "this" {
           name  = "DD_SERVICE"
           value = var.datadog_service != null ? var.datadog_service : var.name # defaults to name of the cloud run service
         }
-        dynamic "volume_mounts" { # adatadog the shared volume to the container if logging is enabled
+        dynamic "volume_mounts" { # add the shared volume to the container if logging is enabled
           for_each = var.datadog_enable_logging == true ? [true] : []
           content {
             name       = var.datadog_shared_volume.name
@@ -374,7 +374,7 @@ resource "google_cloud_run_v2_service" "this" {
           limits = var.datadog_sidecar.resources.limits
         }
       }
-      dynamic "volume_mounts" { # adatadog the shared volume to the sidecar if logging is enabled
+      dynamic "volume_mounts" { # add the shared volume to the sidecar if logging is enabled
         for_each = var.datadog_enable_logging == true ? [true] : []
         content {
           name       = var.datadog_shared_volume.name
@@ -383,7 +383,7 @@ resource "google_cloud_run_v2_service" "this" {
       }
 
       startup_probe {
-        # TODO: adatadog user customization
+        # TODO: add user customization
         tcp_socket {
           port = var.datadog_sidecar.health_port
         }
@@ -467,7 +467,7 @@ resource "google_cloud_run_v2_service" "this" {
     }
 
     # NOTE: Assumes user has not provided any sidecar container, shared volume, or logging details to pass into the module and module is instrumenting everything
-    # If enable_logging is true, adatadog the shared volume to the template volumes
+    # If enable_logging is true, add the shared volume to the template volumes
     dynamic "volumes" {
       for_each = var.datadog_enable_logging == true ? [true] : []
       content {
