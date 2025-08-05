@@ -1,66 +1,80 @@
-variable "dd_api_key" {
-  type = string
+variable "datadog_api_key" {
+  type        = string
   description = "Datadog API key"
-  nullable = false
+  nullable    = false
 }
 
-variable "dd_site" {
-  type = string
+variable "datadog_site" {
+  type        = string
   description = "Datadog site"
-  default = "datadoghq.com"
-  nullable = false
+  default     = "datadoghq.com"
+  nullable    = false
+  validation {
+    condition = contains(
+      [
+        "datadoghq.com",
+        "datadoghq.eu",
+        "us5.datadoghq.com",
+        "us3.datadoghq.com",
+        "ddog-gov.com",
+        "ap1.datadoghq.com",
+        "ap2.datadoghq.com",
+      ],
+    var.datadog_site)
+    error_message = "Invalid Datadog site. Valid options are: 'datadoghq.com', 'datadoghq.eu', 'us5.datadoghq.com', 'us3.datadoghq.com', 'ddog-gov.com', 'ap1.datadoghq.com', or 'ap2.datadoghq.com'."
+  }
 }
 
-variable "dd_service" {
-  type = string
-  description = "Datadog service, searchable tag to be used for logs and tracing."
-  default = null
+variable "datadog_service" {
+  type        = string
+  description = "Datadog Service tag, used for Unified Service Tagging."
+  default     = null
 }
 
-variable "dd_version" {
-  type = string
-  description = "Datadog version of your deployment to be used for tracing/metrics."
-  default = null
+variable "datadog_version" {
+  type        = string
+  description = "Datadog Version tag, used for Unified Service Tagging."
+  default     = null
 }
 
-variable "dd_env" {
-  type = string
-  description = "Datadog environment"
-  default = null
+variable "datadog_env" {
+  type        = string
+  description = "Datadog Environment tag, used for Unified Service Tagging."
+  default     = null
 }
 
-variable "dd_tags" {
-  type = list(string)
+variable "datadog_tags" {
+  type        = list(string)
   description = "Datadog tags"
-  default = null
+  default     = null
 }
 
-variable "dd_enable_logging" {
-  type = bool
+variable "datadog_enable_logging" {
+  type        = bool
   description = "Enables log collection. Defaults to true. Make sure to provide both shared_volume and logging_path."
-  default = true
+  default     = true
 }
 
-variable "dd_logging_path" {
-  type = string
-  description = "Datadog logging path to be used for logging if dd_logs_injection is true."
-  default = "/shared-volume/logs/*.log"
+variable "datadog_logging_path" {
+  type        = string
+  description = "Datadog logging path to be used for logging if datadog_logs_injection is true."
+  default     = "/shared-volume/logs/*.log"
 }
 
-variable "dd_log_level" {
-  type = string
+variable "datadog_log_level" {
+  type        = string
   description = "Datadog log level"
-  default = null
+  default     = null
 }
 
-variable "dd_shared_volume" {
+variable "datadog_shared_volume" {
   type = object({
-    name = string
+    name       = string
     mount_path = string
   })
   description = "Datadog shared volume"
   default = {
-    name = "shared-volume"
+    name       = "shared-volume"
     mount_path = "/shared-volume"
   }
 }
@@ -68,7 +82,7 @@ variable "dd_shared_volume" {
 # trace_enabled = optional(bool, true) #DD_TRACE_ENABLED
 # TODO: DD_TRACE_ENABLED, ask about fips,  ..llmobs?
 
-variable "dd_sidecar" {
+variable "datadog_sidecar" {
   type = object({
     image = optional(string, "gcr.io/datadoghq/serverless-init:latest")
     name  = optional(string, "datadog-sidecar")
@@ -77,22 +91,22 @@ variable "dd_sidecar" {
         cpu    = optional(string, "1")
         memory = optional(string, "512Mi")
       }), null),
-    }), { # default sidecar resources
+      }), { # default sidecar resources
       limits = {
-        cpu = "1"
+        cpu    = "1"
         memory = "512Mi"
       }
     })
-    health_port  = optional(number, 5555) # DD_HEALTH_PORT
-    
+    health_port = optional(number, 5555) # DD_HEALTH_PORT
+
 
   })
   description = "Datadog sidecar configuration"
 }
 
-locals{
-  dd_logging_vol = { #the shared volume for logging which each container can write their Datadog logs to
-    name = var.dd_shared_volume.name
+locals {
+  datadog_logging_vol = { #the shared volume for logging which each container can write their Datadog logs to
+    name = var.datadog_shared_volume.name
     empty_dir = {
       medium = "MEMORY"
     }
@@ -104,49 +118,49 @@ locals{
   #Sidecar env vars
   required_sidecar_env_vars = [ #api, site, service, and healthport are always existing
     {
-      env_name = "DD_API_KEY"
-      env_value = var.dd_api_key
+      env_name  = "DD_API_KEY"
+      env_value = var.datadog_api_key
     },
     {
-      env_name = "DD_SITE"
-      env_value = var.dd_site
+      env_name  = "DD_SITE"
+      env_value = var.datadog_site
     },
     {
-      env_name = "DD_SERVICE"
-      env_value = var.dd_service != null ? var.dd_service : var.name # defaults to name of the cloud run service
+      env_name  = "DD_SERVICE"
+      env_value = var.datadog_service != null ? var.datadog_service : var.name # defaults to name of the cloud run service
     },
     {
-      env_name = "DD_HEALTH_PORT"
-      env_value = tostring(var.dd_sidecar.health_port)
+      env_name  = "DD_HEALTH_PORT"
+      env_value = tostring(var.datadog_sidecar.health_port)
     }
   ]
   all_sidecar_env_vars = concat(
     local.required_sidecar_env_vars,
-    var.dd_version != null ? [{
-      env_name = "DD_VERSION"
-      env_value = var.dd_version
+    var.datadog_version != null ? [{
+      env_name  = "DD_VERSION"
+      env_value = var.datadog_version
     }] : [],
-    var.dd_env != null ? [{
-      env_name = "DD_ENV"
-      env_value = var.dd_env
+    var.datadog_env != null ? [{
+      env_name  = "DD_ENV"
+      env_value = var.datadog_env
     }] : [],
-    var.dd_tags != null ? [
+    var.datadog_tags != null ? [
       {
         env_name  = "DD_TAGS"
-        env_value = join(",", var.dd_tags)
+        env_value = join(",", var.datadog_tags)
       }
     ] : [],
-    var.dd_enable_logging == true ? [{ # always enable logs injection if logging is enabled
-      env_name = "DD_LOGS_INJECTION"
-      env_value = var.dd_enable_logging ? "true" : "false"
+    var.datadog_enable_logging == true ? [{ # always enable logs injection if logging is enabled
+      env_name  = "DD_LOGS_INJECTION"
+      env_value = var.datadog_enable_logging ? "true" : "false"
     }] : [],
-    var.dd_log_level != null ? [{
-      env_name = "DD_LOG_LEVEL"
-      env_value = var.dd_log_level
+    var.datadog_log_level != null ? [{
+      env_name  = "DD_LOG_LEVEL"
+      env_value = var.datadog_log_level
     }] : [],
-    var.dd_enable_logging == true ? [{
-      env_name = "DD_SERVERLESS_LOG_PATH"
-      env_value = var.dd_logging_path
+    var.datadog_enable_logging == true ? [{
+      env_name  = "DD_SERVERLESS_LOG_PATH"
+      env_value = var.datadog_logging_path
     }] : [],
   )
 
@@ -161,7 +175,7 @@ resource "google_cloud_run_v2_service" "this" {
   description          = var.description
   ingress              = var.ingress
   invoker_iam_disabled = var.invoker_iam_disabled
-  labels               = merge({service = var.dd_service != null ? var.dd_service : var.name}, var.labels) # Default service tag value to cloud run resource name if not provided
+  labels               = merge({ service = var.datadog_service != null ? var.datadog_service : var.name }, var.labels) # Default service tag value to cloud run resource name if not provided
   launch_stage         = var.launch_stage
   location             = var.location
   name                 = var.name
@@ -216,7 +230,7 @@ resource "google_cloud_run_v2_service" "this" {
         image          = containers.value.image
         name           = containers.value.name
         working_dir    = containers.value.working_dir
-        
+
         # User-provided resource environment variables
         dynamic "env" {
           for_each = containers.value.env != null ? containers.value.env : []
@@ -241,17 +255,17 @@ resource "google_cloud_run_v2_service" "this" {
         # NOTE: Assumes user has not provided any sidecar container, shared volume, or logging details to pass into the module and module is instrumenting everything
         # Configure DD_SERVICE and volume mounts on application container
         env {
-          name = "DD_SERVICE"
-          value = var.dd_service != null ? var.dd_service : var.name # defaults to name of the cloud run service
+          name  = "DD_SERVICE"
+          value = var.datadog_service != null ? var.datadog_service : var.name # defaults to name of the cloud run service
         }
         dynamic "volume_mounts" { # add the shared volume to the container if logging is enabled
-          for_each = var.dd_enable_logging == true ? [true] : []
+          for_each = var.datadog_enable_logging == true ? [true] : []
           content {
-            name       = var.dd_shared_volume.name
-            mount_path = var.dd_shared_volume.mount_path
+            name       = var.datadog_shared_volume.name
+            mount_path = var.datadog_shared_volume.mount_path
           }
         }
-        
+
         dynamic "liveness_probe" {
           for_each = containers.value.liveness_probe != null ? [true] : []
           content {
@@ -352,31 +366,31 @@ resource "google_cloud_run_v2_service" "this" {
     # Create the sidecar container
     # NOTE: Assumes user has not provided any sidecar container, shared volume, or logging details to pass into the module and module is instrumenting everything
     containers {
-      name = var.dd_sidecar.name
-      image = var.dd_sidecar.image
+      name  = var.datadog_sidecar.name
+      image = var.datadog_sidecar.image
       dynamic "resources" {
-        for_each = var.dd_sidecar.resources != null ? [true] : []
+        for_each = var.datadog_sidecar.resources != null ? [true] : []
         content {
-          limits = var.dd_sidecar.resources.limits
+          limits = var.datadog_sidecar.resources.limits
         }
       }
       dynamic "volume_mounts" { # add the shared volume to the sidecar if logging is enabled
-        for_each = var.dd_enable_logging == true ? [true] : []
+        for_each = var.datadog_enable_logging == true ? [true] : []
         content {
-          name = var.dd_shared_volume.name
-          mount_path = var.dd_shared_volume.mount_path
+          name       = var.datadog_shared_volume.name
+          mount_path = var.datadog_shared_volume.mount_path
         }
       }
 
       startup_probe {
         # TODO: add user customization
         tcp_socket {
-          port = var.dd_sidecar.health_port
+          port = var.datadog_sidecar.health_port
         }
         initial_delay_seconds = 0
-        period_seconds = 10
-        failure_threshold = 3
-        timeout_seconds = 1
+        period_seconds        = 10
+        failure_threshold     = 3
+        timeout_seconds       = 1
       }
 
       # all env variables
@@ -455,9 +469,9 @@ resource "google_cloud_run_v2_service" "this" {
     # NOTE: Assumes user has not provided any sidecar container, shared volume, or logging details to pass into the module and module is instrumenting everything
     # If enable_logging is true, add the shared volume to the template volumes
     dynamic "volumes" {
-      for_each = var.dd_enable_logging == true ? [true] : []
+      for_each = var.datadog_enable_logging == true ? [true] : []
       content {
-        name = var.dd_shared_volume.name
+        name = var.datadog_shared_volume.name
         empty_dir {
           medium = "MEMORY"
         }
