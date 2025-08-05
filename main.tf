@@ -13,13 +13,13 @@ variable "dd_site" {
 
 variable "dd_service" {
   type = string
-  description = "Datadog service, searchable tag to be used for logs and tracing"
+  description = "Datadog service, searchable tag to be used for logs and tracing."
   default = null
 }
 
 variable "dd_version" {
   type = string
-  description = "Datadog version of your deployment to be used for tracing/metrics"
+  description = "Datadog version of your deployment to be used for tracing/metrics."
   default = null
 }
 
@@ -37,13 +37,13 @@ variable "dd_tags" {
 
 variable "dd_enable_logging" {
   type = bool
-  description = "Enables logging to show up in Datadog Serverless Monitoring, default true, make sure to provide both shared_volume and logging_path"
+  description = "Enables log collection. Defaults to true. Make sure to provide both shared_volume and logging_path."
   default = true
 }
 
 variable "dd_logging_path" {
   type = string
-  description = "Datadog logging path to be used for logging if dd_logs_injection is true"
+  description = "Datadog logging path to be used for logging if dd_logs_injection is true."
   default = "/shared-volume/logs/*.log"
 }
 
