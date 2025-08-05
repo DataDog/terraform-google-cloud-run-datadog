@@ -21,7 +21,9 @@ module "datadog-cloud-run-v2-wrapper" {
 
 
   datadog_sidecar = {
-    # uses default sidecar image, name, resources, healthport
+    #uses default sidecar image, name, resources, healthport
+    image = "gcr.io/datadoghq/serverless-init:latest"
+    name = "datadog-sidecar"
     resources = {
       limits = {
         cpu = "1"
