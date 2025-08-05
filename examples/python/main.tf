@@ -9,21 +9,19 @@ module "datadog-cloud-run-v2-wrapper" {
   location = var.location
   deletion_protection = false
 
-  dd_api_key = var.datadog_api_key
-  dd_site = "datadoghq.com"
-  dd_service = "cloudrun-tf-python-hello"
-  dd_version = "1.0.0"
-  dd_tags = ["test:tag-example", "foo:tag-example-2"]
-  dd_env = "serverless"
-  dd_enable_logging = true
-  dd_log_level = "debug"
-  dd_logging_path = "/shared-volume/logs/*.log"
+  datadog_api_key = var.datadog_api_key
+  datadog_site = "datadoghq.com"
+  datadog_service = "cloudrun-tf-python-hello"
+  datadog_version = "1.0.0"
+  datadog_tags = ["test:tag-example", "foo:tag-example-2"]
+  datadog_env = "serverless"
+  datadog_enable_logging = true
+  datadog_log_level = "debug"
+  datadog_logging_path = "/shared-volume/logs/*.log"
 
 
-  dd_sidecar = {
-    #uses default sidecar image, name, resources, healthport
-    image = "gcr.io/datadoghq/serverless-init:latest"
-    name = "datadog-sidecar"
+  datadog_sidecar = {
+    # uses default sidecar image, name, resources, healthport
     resources = {
       limits = {
         cpu = "1"
