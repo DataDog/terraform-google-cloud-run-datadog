@@ -135,7 +135,8 @@ locals {
     coalesce(c.volume_mounts, [])
   ])
 
-  filtered_volume_mounts = var.datadog_enable_logging == true ? [ #filter out volume mounts with same name or path as the shared volume only if logging is enabled
+  #filter out volume mounts with same name or path as the shared volume only if logging is enabled
+  filtered_volume_mounts = var.datadog_enable_logging == true ? [
     for vm in coalesce(local.all_volume_mounts, []) :
     vm if !(vm.name == var.datadog_shared_volume.name || vm.mount_path == var.datadog_shared_volume.mount_path)
   ] : local.all_volume_mounts
@@ -143,8 +144,8 @@ locals {
   overlapping_volume_mounts = length(local.filtered_volume_mounts) != length(local.all_volume_mounts)
 
 
-  #Sidecar env vars
-  required_sidecar_env_vars = [ #api, site, service, and healthport are always existing
+  #Sidecar env vars, api, site, service, and healthport are always existing
+  required_sidecar_env_vars = [
     {
       env_name  = "DD_API_KEY"
       env_value = var.datadog_api_key
@@ -211,7 +212,7 @@ check "sidecar_already_exists" {
 check "volume_mounts_share_names_and_or_paths" {
   assert {
     condition = local.overlapping_volume_mounts == false
-    error_message = "Logging is enabled, and user-inputted volume mounts overlap with values for var.datadog_shared_volume. This module will remove the following containers' volume_mounts sharing a name or path as the Datadog shared volume: ${join(",",[for vm in local.all_volume_mounts : format("\n%s:%s", vm.name, vm.mount_path)if !contains(local.filtered_volume_mounts, vm)])}.\nThis module will add the Datadog volume_mount instead to all containers."
+    error_message = "Logging is enabled, and user-inputted volume mounts overlap with values for var.datadog_shared_volume. This module will remove the following containers' volume_mounts sharing a name or path with the Datadog shared volume: ${join(",",[for vm in local.all_volume_mounts : format("\n%s:%s", vm.name, vm.mount_path)if !contains(local.filtered_volume_mounts, vm)])}.\nThis module will add the Datadog volume_mount instead to all containers."
   }
 }
 
