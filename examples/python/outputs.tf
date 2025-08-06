@@ -12,3 +12,18 @@ output "service_volumes" {
   description = "List of volumes in the Cloud Run service."
   value = module.datadog-cloud-run-v2-wrapper.template[0].volumes
 }
+
+output "ignored_volume_mounts" {
+  description = "List of container volume_mounts that share name or mount_path with the Datadog shared volume and are not added to the Cloud Run service when logging is enabled."
+  value = module.datadog-cloud-run-v2-wrapper.ignored_volume_mounts
+}
+
+output "ignored_containers" {
+  description = "List of containers that are ignored by the module."
+  value = module.datadog-cloud-run-v2-wrapper.ignored_containers
+}
+
+output "ignored_volumes" {
+  description = "List of volumes that are ignored by the module."
+  value = module.datadog-cloud-run-v2-wrapper.ignored_volumes
+}
