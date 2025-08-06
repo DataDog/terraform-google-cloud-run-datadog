@@ -57,7 +57,7 @@ variable "datadog_enable_logging" {
 
 variable "datadog_logging_path" {
   type        = string
-  description = "Datadog logging path to be used for logging if datadog_logs_injection is true."
+  description = "Datadog logging path to be used for log collection if datadog_logs_injection is true."
   default     = "/shared-volume/logs/*.log"
 }
 
@@ -72,15 +72,14 @@ variable "datadog_shared_volume" {
     name       = string
     mount_path = string
   })
-  description = "Datadog shared volume"
+  description = "Datadog shared volume for log collection. Note: will always be of type empty_dir and in-memory. If a volume with this name is provided as part of var.template.volumes, it will be overridden."
   default = {
     name       = "shared-volume"
     mount_path = "/shared-volume"
   }
 }
 
-# trace_enabled = optional(bool, true) #DD_TRACE_ENABLED
-# TODO: DD_TRACE_ENABLED, ask about fips,  ..llmobs?
+# TODO: DD_TRACE_ENABLED (does not work), ask about fips,  ..llmobs?
 
 variable "datadog_sidecar" {
   type = object({
@@ -112,11 +111,41 @@ locals {
     }
   }
 
-  # TODO: figure out how to handle case if shared_volume is already in the template volumes and type-safety the tuple conversion
-  # TODO: what if user has a dd-sidecar container already?
+  # User-check 1: use this to override user's var.template.volumes and remove the shared volume if shared_volume already exists and logging is enabled, else keep user's volumes
+  volumes_without_shared_volume = var.datadog_enable_logging == true ? [ 
+    for v in coalesce(var.template.volumes, []) : v
+    if v.name != var.datadog_shared_volume.name
+    ] : coalesce(var.template.volumes, [])
+ 
+ # flag if logging is enabled and shared_volume is already in the template volumes (name of volume exists)
+  shared_volume_already_exists = length(var.template.volumes) != length(local.volumes_without_shared_volume)
 
-  #Sidecar env vars
-  required_sidecar_env_vars = [ #api, site, service, and healthport are always existing
+  # User-check 2: check if sidecar container already exists and remove it from the var.template.containers list if it does (to be overridden by module's instantiation)
+  containers_without_sidecar = [
+    for c in coalesce(var.template.containers, []) : c
+    if !strcontains(c.image, "gcr.io/datadoghq/serverless-init")
+  ]
+
+  # flag if sidecar container already exists
+  already_has_sidecar = length(coalesce(var.template.containers, [])) != length(local.containers_without_sidecar)
+
+  # User-check 3: check for each provided container (ignoring sidecar if provided) the volume mounts and if logging is enabled, exclude all volume mounts with same name OR path as the shared volume
+  all_volume_mounts = flatten([
+    for c in coalesce(local.containers_without_sidecar, []) :
+    coalesce(c.volume_mounts, [])
+  ])
+
+  #filter out volume mounts with same name or path as the shared volume only if logging is enabled
+  filtered_volume_mounts = var.datadog_enable_logging == true ? [
+    for vm in coalesce(local.all_volume_mounts, []) :
+    vm if !(vm.name == var.datadog_shared_volume.name || vm.mount_path == var.datadog_shared_volume.mount_path)
+  ] : local.all_volume_mounts
+  
+  overlapping_volume_mounts = length(local.filtered_volume_mounts) != length(local.all_volume_mounts)
+
+
+  #Sidecar env vars, api, site, service, and healthport are always existing
+  required_sidecar_env_vars = [
     {
       env_name  = "DD_API_KEY"
       env_value = var.datadog_api_key
@@ -164,6 +193,27 @@ locals {
     }] : [],
   )
 
+}
+
+check "logging_volume_already_exists" {
+  assert {
+    condition = local.shared_volume_already_exists == false
+    error_message = "Datadog log collection is enabled and a volume with the name \"${var.datadog_shared_volume.name}\" already exists in the var.template.volumes list. This module will override the existing volume with the settings provided in var.datadog_shared_volume and use it for Datadog log collection. To disable log collection, set var.datadog_enable_logging to false."
+  }
+}
+
+check "sidecar_already_exists" {
+  assert {
+    condition = local.already_has_sidecar == false
+    error_message = "A sidecar container using the Datadog agent image \"gcr.io/datadoghq/serverless-init...\" already exists in the var.template.containers list. This module will override the existing container(s) using this image with the settings provided in var.datadog_sidecar."
+  }
+}
+
+check "volume_mounts_share_names_and_or_paths" {
+  assert {
+    condition = local.overlapping_volume_mounts == false
+    error_message = "Logging is enabled, and user-inputted volume mounts overlap with values for var.datadog_shared_volume. This module will remove the following containers' volume_mounts sharing a name or path with the Datadog shared volume: ${join(",",[for vm in local.all_volume_mounts : format("\n%s:%s", vm.name, vm.mount_path)if !contains(local.filtered_volume_mounts, vm)])}.\nThis module will add the Datadog volume_mount instead to all containers."
+  }
 }
 
 resource "google_cloud_run_v2_service" "this" {
@@ -221,7 +271,7 @@ resource "google_cloud_run_v2_service" "this" {
     session_affinity                 = var.template.session_affinity
     timeout                          = var.template.timeout
     dynamic "containers" {
-      for_each = var.template.containers != null ? var.template.containers : []
+      for_each = local.containers_without_sidecar != null ? local.containers_without_sidecar : []
       content {
         args           = containers.value.args
         base_image_uri = containers.value.base_image_uri
@@ -353,8 +403,10 @@ resource "google_cloud_run_v2_service" "this" {
             }
           }
         }
-        dynamic "volume_mounts" {
-          for_each = containers.value.volume_mounts != null ? containers.value.volume_mounts : []
+
+      # User-check 3: check for each provided container the volume mounts and if logging is enabled and the shared volume is an input, do not mount it again
+      dynamic "volume_mounts" {
+        for_each = [for vm in coalesce(containers.value.volume_mounts, []) : vm if contains(local.filtered_volume_mounts, vm)]
           content {
             mount_path = volume_mounts.value.mount_path
             name       = volume_mounts.value.name
@@ -364,7 +416,7 @@ resource "google_cloud_run_v2_service" "this" {
     }
 
     # Create the sidecar container
-    # NOTE: Assumes user has not provided any sidecar container, shared volume, or logging details to pass into the module and module is instrumenting everything
+    # NOTE: User can have provided shared volume, a sidecar container, or logging details to pass into the module and module overrides it, instruments everything
     containers {
       name  = var.datadog_sidecar.name
       image = var.datadog_sidecar.image
@@ -417,7 +469,7 @@ resource "google_cloud_run_v2_service" "this" {
       }
     }
     dynamic "volumes" {
-      for_each = var.template.volumes != null ? var.template.volumes : []
+      for_each = local.volumes_without_shared_volume
       content {
         name = volumes.value.name
         dynamic "cloud_sql_instance" {
@@ -466,8 +518,7 @@ resource "google_cloud_run_v2_service" "this" {
       }
     }
 
-    # NOTE: Assumes user has not provided any sidecar container, shared volume, or logging details to pass into the module and module is instrumenting everything
-    # If enable_logging is true, add the shared volume to the template volumes
+    # If dd_enable_logging is true, add the shared volume to the template volumes
     dynamic "volumes" {
       for_each = var.datadog_enable_logging == true ? [true] : []
       content {
