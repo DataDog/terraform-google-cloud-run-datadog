@@ -133,7 +133,7 @@ locals {
     ] : coalesce(var.template.volumes, [])
  
  # flag if logging is enabled and shared_volume is already in the template volumes (name of volume exists)
-  shared_volume_already_exists = length(var.template.volumes) != length(local.volumes_without_shared_volume)
+  shared_volume_already_exists = length(coalesce(var.template.volumes, []) ) != length(local.volumes_without_shared_volume)
 
   # User-check 2: check if sidecar container already exists and remove it from the var.template.containers list if it does (to be overridden by module's instantiation)
   containers_without_sidecar = [
