@@ -103,30 +103,12 @@ variable "datadog_sidecar" {
         initial_delay_seconds = optional(number),
         period_seconds        = optional(number),
         timeout_seconds       = optional(number),
-        grpc = optional(object({
-          port    = optional(number),
-          service = optional(string)
-        })),
-        http_get = optional(object({
-          path = optional(string),
-          port = optional(number),
-          http_headers = optional(list(object({
-            name  = string,
-            value = optional(string)
-          })))
-        })),
-        tcp_socket = optional(object({
-          port = optional(number)
-        }))
       }),
       { # default startup probe
         failure_threshold = 3
         period_seconds = 10
         initial_delay_seconds = 0
         timeout_seconds = 1
-        tcp_socket = {
-          port = 5555
-        }
       }
     )
     health_port = optional(number, 5555) # DD_HEALTH_PORT
@@ -175,7 +157,6 @@ locals {
   ] : local.all_volume_mounts
   
   overlapping_volume_mounts = length(local.filtered_volume_mounts) != length(local.all_volume_mounts)
-
 
   #Sidecar env vars, api, site, service, and healthport are always existing
   required_sidecar_env_vars = [
@@ -335,7 +316,7 @@ resource "google_cloud_run_v2_service" "this" {
           }
         }
 
-        # NOTE: Assumes user has not provided any sidecar container, shared volume, or logging details to pass into the module and module is instrumenting everything
+        # NOTE: Assumes user could have provided a sidecar container, shared volume, or volume_mounts to pass into the module, module will override conflicting user inputs
         # Configure DD_SERVICE and volume mounts on application container
         env {
           name  = "DD_SERVICE"
@@ -472,32 +453,8 @@ resource "google_cloud_run_v2_service" "this" {
         initial_delay_seconds = var.datadog_sidecar.startup_probe.initial_delay_seconds
         period_seconds        = var.datadog_sidecar.startup_probe.period_seconds
         timeout_seconds       = var.datadog_sidecar.startup_probe.timeout_seconds
-        dynamic "grpc" {
-              for_each = var.datadog_sidecar.startup_probe.grpc != null ? [true] : []
-              content {
-                port    = var.datadog_sidecar.startup_probe.grpc.port
-                service = var.datadog_sidecar.startup_probe.grpc.service
-              }
-            }
-        dynamic "http_get" {
-          for_each = var.datadog_sidecar.startup_probe.http_get != null ? [true] : []
-          content {
-            path = var.datadog_sidecar.startup_probe.http_get.path
-            port = var.datadog_sidecar.startup_probe.http_get.port
-            dynamic "http_headers" {
-              for_each = var.datadog_sidecar.startup_probe.http_get.http_headers != null ? var.datadog_sidecar.startup_probe.http_get.http_headers : []
-              content {
-                name  = http_headers.value.name
-                value = http_headers.value.value
-              }
-            }
-          }
-        }
-        dynamic "tcp_socket" {
-          for_each = var.datadog_sidecar.startup_probe.tcp_socket != null ? [true] : []
-          content {
-            port = var.datadog_sidecar.startup_probe.tcp_socket.port
-          }
+        tcp_socket {
+          port = var.datadog_sidecar.health_port
         }
       }
 
