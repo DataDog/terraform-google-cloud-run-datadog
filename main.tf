@@ -118,16 +118,17 @@ variable "datadog_sidecar" {
         tcp_socket = optional(object({
           port = optional(number)
         }))
-      }),{
-      
-      failure_threshold = 3
-      period_seconds = 10
-      initial_delay_seconds = 0
-      timeout_seconds = 1
-      tcp_socket = {
-        port = 5555
+      }),
+      { # default startup probe
+        failure_threshold = 3
+        period_seconds = 10
+        initial_delay_seconds = 0
+        timeout_seconds = 1
+        tcp_socket = {
+          port = 5555
+        }
       }
-    })
+    )
     health_port = optional(number, 5555) # DD_HEALTH_PORT
 
 
