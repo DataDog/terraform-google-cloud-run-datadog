@@ -71,6 +71,7 @@ variable "datadog_shared_volume" {
   type = object({
     name       = string
     mount_path = string
+    size_limit = optional(string)
   })
   description = "Datadog shared volume for log collection. Note: will always be of type empty_dir and in-memory. If a volume with this name is provided as part of var.template.volumes, it will be overridden."
   default = {
@@ -94,6 +95,37 @@ variable "datadog_sidecar" {
       limits = {
         cpu    = "1"
         memory = "512Mi"
+      }
+    })
+    startup_probe = optional(
+      object({
+        failure_threshold     = optional(number),
+        initial_delay_seconds = optional(number),
+        period_seconds        = optional(number),
+        timeout_seconds       = optional(number),
+        grpc = optional(object({
+          port    = optional(number),
+          service = optional(string)
+        })),
+        http_get = optional(object({
+          path = optional(string),
+          port = optional(number),
+          http_headers = optional(list(object({
+            name  = string,
+            value = optional(string)
+          })))
+        })),
+        tcp_socket = optional(object({
+          port = optional(number)
+        }))
+      }),{
+      
+      failure_threshold = 3
+      period_seconds = 10
+      initial_delay_seconds = 0
+      timeout_seconds = 1
+      tcp_socket = {
+        port = 5555
       }
     })
     health_port = optional(number, 5555) # DD_HEALTH_PORT
@@ -416,7 +448,7 @@ resource "google_cloud_run_v2_service" "this" {
     }
 
     # Create the sidecar container
-    # NOTE: User can have provided shared volume, a sidecar container, or logging details to pass into the module and module overrides it, instruments everything
+    # NOTE: User can have provided a sidecar container but module overrides it, instruments everything
     containers {
       name  = var.datadog_sidecar.name
       image = var.datadog_sidecar.image
@@ -435,14 +467,37 @@ resource "google_cloud_run_v2_service" "this" {
       }
 
       startup_probe {
-        # TODO: add user customization
-        tcp_socket {
-          port = var.datadog_sidecar.health_port
+        failure_threshold     = var.datadog_sidecar.startup_probe.failure_threshold
+        initial_delay_seconds = var.datadog_sidecar.startup_probe.initial_delay_seconds
+        period_seconds        = var.datadog_sidecar.startup_probe.period_seconds
+        timeout_seconds       = var.datadog_sidecar.startup_probe.timeout_seconds
+        dynamic "grpc" {
+              for_each = var.datadog_sidecar.startup_probe.grpc != null ? [true] : []
+              content {
+                port    = var.datadog_sidecar.startup_probe.grpc.port
+                service = var.datadog_sidecar.startup_probe.grpc.service
+              }
+            }
+        dynamic "http_get" {
+          for_each = var.datadog_sidecar.startup_probe.http_get != null ? [true] : []
+          content {
+            path = var.datadog_sidecar.startup_probe.http_get.path
+            port = var.datadog_sidecar.startup_probe.http_get.port
+            dynamic "http_headers" {
+              for_each = var.datadog_sidecar.startup_probe.http_get.http_headers != null ? var.datadog_sidecar.startup_probe.http_get.http_headers : []
+              content {
+                name  = http_headers.value.name
+                value = http_headers.value.value
+              }
+            }
+          }
         }
-        initial_delay_seconds = 0
-        period_seconds        = 10
-        failure_threshold     = 3
-        timeout_seconds       = 1
+        dynamic "tcp_socket" {
+          for_each = var.datadog_sidecar.startup_probe.tcp_socket != null ? [true] : []
+          content {
+            port = var.datadog_sidecar.startup_probe.tcp_socket.port
+          }
+        }
       }
 
       # all env variables
@@ -525,6 +580,7 @@ resource "google_cloud_run_v2_service" "this" {
         name = var.datadog_shared_volume.name
         empty_dir {
           medium = "MEMORY"
+          size_limit = var.datadog_shared_volume.size_limit
         }
       }
     }
