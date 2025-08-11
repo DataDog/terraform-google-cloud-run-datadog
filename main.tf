@@ -51,13 +51,13 @@ variable "datadog_tags" {
 
 variable "datadog_enable_logging" {
   type        = bool
-  description = "Enables log collection. Defaults to true. Make sure to provide both shared_volume and logging_path."
+  description = "Enables log collection. Defaults to true. Make sure to provide both var.datadog_shared_volume and var.datadog_logging_path."
   default     = true
 }
 
 variable "datadog_logging_path" {
   type        = string
-  description = "(Not recommended to change) Datadog logging path to be used for log collection if datadog_logs_injection is true. Must begin with datadog_shared_volume.mount_path."
+  description = "Datadog logging path to be used for log collection if var.datadog_enable_logging is true. Must begin with path given in var.datadog_shared_volume.mount_path."
   default     = "/shared-volume/logs/*.log"
 }
 
@@ -73,7 +73,7 @@ variable "datadog_shared_volume" {
     mount_path = string
     size_limit = optional(string)
   })
-  description = "(Not recommended to change) Datadog shared volume for log collection. Note: will always be of type empty_dir and in-memory. If a volume with this name is provided as part of var.template.volumes, it will be overridden."
+  description = "Datadog shared volume for log collection. Note: will always be of type empty_dir and in-memory. If a volume with this name is provided as part of var.template.volumes, it will be overridden."
   default = {
     name       = "shared-volume"
     mount_path = "/shared-volume"
@@ -115,7 +115,7 @@ variable "datadog_sidecar" {
     #TODO: env var option +  merge with sidecar 
 
   })
-  description = "Datadog sidecar configuration. NOTE: It is not recommended to change the name of the sidecar container."
+  description = "Datadog sidecar configuration. Requirements include:\n- Image for version of Datadog agent to use.\n- Resources like for any cloud run container.\n- Startup probe settings only for failure_threshold, initial_delay_seconds, period_seconds, timeout_seconds.\n- Health port is used to start the startup probe.\n- (Optional) Environment variables for customizing Datadog agent configuration."
 }
 
 locals {
