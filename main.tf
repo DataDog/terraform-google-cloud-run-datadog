@@ -115,7 +115,7 @@ variable "datadog_sidecar" {
     #TODO: env var option +  merge with sidecar 
 
   })
-  description = "Datadog sidecar configuration. Nested attributes include:\n- image - Image for version of Datadog agent to use.\n- name - Name of the sidecar container.\n- resources - Resources like for any cloud run container.\n- startup_probe - Startup probe settings only for failure_threshold, initial_delay_seconds, period_seconds, timeout_seconds.\n- health_port - Health port is used to start the startup probe.\n- env_vars - List of environment variables for customizing Datadog agent configuration, if any."
+  description = "Datadog sidecar configuration. Nested attributes include:\n- image - Image for version of Datadog agent to use.\n- name - Name of the sidecar container.\n- resources - Resources like for any cloud run container.\n- startup_probe - Startup probe settings only for failure_threshold, initial_delay_seconds, period_seconds, timeout_seconds.\n- health_port - Health port to start the startup probe.\n- env_vars - List of environment variables for customizing Datadog agent configuration, if any."
 }
 
 locals {
