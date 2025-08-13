@@ -51,13 +51,13 @@ variable "datadog_tags" {
 
 variable "datadog_enable_logging" {
   type        = bool
-  description = "Enables log collection. Defaults to true. Make sure to provide both shared_volume and logging_path."
+  description = "Enables log collection. Defaults to true. Make sure to provide both var.datadog_shared_volume and var.datadog_logging_path."
   default     = true
 }
 
 variable "datadog_logging_path" {
   type        = string
-  description = "Datadog logging path to be used for log collection if datadog_logs_injection is true."
+  description = "Datadog logging path to be used for log collection if var.datadog_enable_logging is true. Must begin with path given in var.datadog_shared_volume.mount_path."
   default     = "/shared-volume/logs/*.log"
 }
 
@@ -112,10 +112,10 @@ variable "datadog_sidecar" {
       }
     )
     health_port = optional(number, 5555) # DD_HEALTH_PORT
-
+    #TODO: env var option +  merge with sidecar 
 
   })
-  description = "Datadog sidecar configuration"
+  description = "Datadog sidecar configuration. Nested attributes include:\n- image - Image for version of Datadog agent to use.\n- name - Name of the sidecar container.\n- resources - Resources like for any cloud run container.\n- startup_probe - Startup probe settings only for failure_threshold, initial_delay_seconds, period_seconds, timeout_seconds.\n- health_port - Health port to start the startup probe.\n- env_vars - List of environment variables for customizing Datadog agent configuration, if any."
 }
 
 locals {
@@ -138,7 +138,7 @@ locals {
   # User-check 2: check if sidecar container already exists and remove it from the var.template.containers list if it does (to be overridden by module's instantiation)
   containers_without_sidecar = [
     for c in coalesce(var.template.containers, []) : c
-    if !strcontains(c.image, "gcr.io/datadoghq/serverless-init")
+    if c.name != var.datadog_sidecar.name
   ]
 
   # flag if sidecar container already exists
@@ -219,7 +219,7 @@ check "logging_volume_already_exists" {
 check "sidecar_already_exists" {
   assert {
     condition = local.already_has_sidecar == false
-    error_message = "A sidecar container using the Datadog agent image \"gcr.io/datadoghq/serverless-init...\" already exists in the var.template.containers list. This module will override the existing container(s) using this image with the settings provided in var.datadog_sidecar."
+    error_message = "A sidecar container with the name \"${var.datadog_sidecar.name}\" already exists in the var.template.containers list. This module will override the existing container(s) with the settings provided in var.datadog_sidecar."
   }
 }
 
