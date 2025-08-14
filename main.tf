@@ -298,7 +298,7 @@ resource "google_cloud_run_v2_service" "this" {
 
         # User-provided resource environment variables
         dynamic "env" {
-          for_each = containers.value.env != null ? containers.value.env : []
+          for_each = containers.value.env != null ? [for env in containers.value.env : env if env.name != "DD_SERVERLESS_LOG_PATH"] : [] # will ignore user-provided DD_SERVERLESS_LOG_PATH env var for the var.datadog_logging_path value
           content {
             name  = env.value.name
             value = env.value.value
@@ -334,7 +334,14 @@ resource "google_cloud_run_v2_service" "this" {
           }
         }
 
-        # also add the same dd_serverless_log_path env var to user containers as for sidecar so logs cannot be dropped
+        # also add the same dd_serverless_log_path !!(var.datadog_logging_path)!! env var to user containers as for sidecar so logs cannot be dropped
+        dynamic "env" {
+          for_each = var.datadog_enable_logging == true ? [true] : []
+          content {
+            name = "DD_SERVERLESS_LOG_PATH"
+            value = var.datadog_logging_path
+          }
+        }
 
         # Always adds module-computed volume mount on application container
         dynamic "volume_mounts" { # add the shared volume to the container if logging is enabled
