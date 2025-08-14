@@ -177,10 +177,6 @@ locals {
       env_name  = "DD_HEALTH_PORT"
       env_value = tostring(var.datadog_sidecar.health_port)
     },
-    # { # always enable logs injection if logging is enabled
-    #   env_name  = "DD_LOGS_INJECTION"
-    #   env_value = var.datadog_enable_logging ? "true" : "false"
-    # }
   ]
   all_sidecar_env_vars = concat(
     local.required_sidecar_env_vars,
