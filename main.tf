@@ -330,7 +330,7 @@ resource "google_cloud_run_v2_service" "this" {
           }
         }
 
-        # also add the same dd_serverless_log_path !!(var.datadog_logging_path)!! env var to user containers as for sidecar so logs cannot be dropped
+        # also add the same dd_serverless_log_path (var.datadog_logging_path) env var to user containers as for sidecar so logs cannot be dropped
         dynamic "env" {
           for_each = var.datadog_enable_logging == true ? [true] : []
           content {
