@@ -17,7 +17,7 @@ provider "google" {
 module "module-level-override" {
   source = "../../"
   name = "cloudrun-sidecar-user-dd-service"
-  location = var.location
+  location = var.region
   deletion_protection = false
 
   datadog_service = "service-value-used"
@@ -65,7 +65,7 @@ module "module-level-override" {
 module "module-name-default" {
   source = "../../"
   name = "service-name-used-in-dd-service-var"
-  location = var.location
+  location = var.region
   deletion_protection = false
 
 #   datadog_service = #should not be provided, will default to service name of module
@@ -115,7 +115,7 @@ module "module-name-default" {
 module "container-level-override" {
   source = "../../"
   name = "cloudrun-sidecar-user-dd-service"
-  location = var.location
+  location = var.region
   deletion_protection = false
 
   datadog_service = "service-value-not used"

@@ -6,16 +6,16 @@ provider "google" {
 module "datadog-cloud-run-v2-wrapper" {
   source = "../../"
   name = var.name
-  location = var.location
+  location = var.region
   deletion_protection = false
 
   datadog_api_key = var.datadog_api_key
   datadog_site = "datadoghq.com"
   datadog_service = "cloudrun-tf-python-hello"
-  datadog_version = "1.0.0"
+  datadog_version = "1.0.2"
   datadog_tags = ["test:tag-example", "foo:tag-example-2"]
   datadog_env = "serverless"
-  datadog_enable_logging = true
+  datadog_enable_logging = false
   datadog_log_level = "debug"
   datadog_logging_path = "/shared-volume/logs/*.log"
   datadog_shared_volume = {
@@ -69,9 +69,6 @@ module "datadog-cloud-run-v2-wrapper" {
             name = "MY_ENV_VAR1"
             value = "my_value"
           },
-          {
-            name = "ANOTHER_ENV_VAR"
-          }
         ]
       },
     ]

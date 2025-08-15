@@ -8,7 +8,7 @@ variable "project" {
 
 variable "region" {
   type        = string
-  description = "The region to deploy the service to"
+  description = "The region to deploy the service to (used in example for both google provider region and cloud run resource location)"
   nullable    = false
 }
 
@@ -18,12 +18,6 @@ variable "name" {
   type        = string
   description = "The name of the Cloud Run service"
   default     = "cloud-run-tf-python-test"
-  nullable    = false
-}
-
-variable "location" {
-  type        = string
-  description = "The region to deploy the service to"
   nullable    = false
 }
 
