@@ -13,7 +13,7 @@ provider "google" {
 
 # test that when provided on module, module-set DD_SERVICE should override the cloud run service name
 # test that when var.datadog_logging_path is provided on module, it should be used for DD_SERVERLESS_LOG_PATH env var in main containers, and in sidecar container
-# DD_LOGS_INJECTION can be set to false at module level, and is false for all containers
+# DD_LOGS_INJECTION can be set to false at module level, and is NOT set for all containers
 module "module-level-override" {
   source = "../../"
   name = "cloudrun-sidecar-user-dd-service"

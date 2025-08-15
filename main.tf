@@ -321,12 +321,13 @@ resource "google_cloud_run_v2_service" "this" {
             value = local.datadog_service
           }
         }
-        # if user provides a container-level DD_LOGS_INJECTION env var, we use the more specific value, else we use module-computed default (true when var.datadog_enable_logging is true)
+        # if user provides a container-level DD_LOGS_INJECTION env var, we use the more specific value (and should not set DD_LOGS_INJECTION here), 
+        # if logging is not enabled, DD_LOGS_INJECTION should not be set
         dynamic "env" {
-          for_each = contains([for env in coalesce(containers.value.env, []) : env.name], "DD_LOGS_INJECTION") ? [] : [true]
+          for_each = (contains([for env in coalesce(containers.value.env, []) : env.name], "DD_LOGS_INJECTION") || var.datadog_enable_logging == false) ? [] : [true]
           content {
             name  = "DD_LOGS_INJECTION"
-            value = var.datadog_enable_logging ? "true" : "false"
+            value = "true"
           }
         }
 
