@@ -112,10 +112,13 @@ variable "datadog_sidecar" {
       }
     )
     health_port = optional(number, 5555) # DD_HEALTH_PORT
-    #TODO: env var option +  merge with sidecar 
+    env_vars = optional(list(object({ # user-customizable env vars for Datadog agent configuration
+      name = string
+      value = string
+    })), null)
 
   })
-  description = "Datadog sidecar configuration. Nested attributes include:\n- image - Image for version of Datadog agent to use.\n- name - Name of the sidecar container.\n- resources - Resources like for any cloud run container.\n- startup_probe - Startup probe settings only for failure_threshold, initial_delay_seconds, period_seconds, timeout_seconds.\n- health_port - Health port to start the startup probe.\n- env_vars - List of environment variables for customizing Datadog agent configuration, if any."
+  description = "Datadog sidecar configuration. Nested attributes include:\n- image - Image for version of Datadog agent to use.\n- name - Name of the sidecar container.\n- resources - Resources like for any cloud run container.\n- startup_probe - Startup probe settings only for failure_threshold, initial_delay_seconds, period_seconds, timeout_seconds.\n- health_port - Health port to start the startup probe.\n- env_vars - List of environment variables with name and value fieldsfor customizing Datadog agent configuration, if any."
 }
 
 locals {
@@ -126,7 +129,21 @@ locals {
       medium = "MEMORY"
     }
   }
+  module_controlled_env_vars = [
+    "DD_API_KEY",
+    "DD_SITE",
+    "DD_SERVICE",
+    "DD_HEALTH_PORT",
+    "DD_VERSION",
+    "DD_ENV",
+    "DD_TAGS",
+    "DD_LOG_LEVEL",
+    "DD_LOGS_INJECTION",
+    "DD_SERVERLESS_LOG_PATH",
+  ]
 
+
+  ### Variables to handle input checks and infrastructure overrides (volume, volume_mount, sidecar container)
   # User-check 1: use this to override user's var.template.volumes and remove the shared volume if shared_volume already exists and logging is enabled, else keep user's volumes
   volumes_without_shared_volume = var.datadog_enable_logging == true ? [ 
     for v in coalesce(var.template.volumes, []) : v
@@ -159,8 +176,9 @@ locals {
   
   overlapping_volume_mounts = length(local.filtered_volume_mounts) != length(local.all_volume_mounts)
 
-  #Sidecar env vars, api, site, service, and healthport are always existing
-  required_sidecar_env_vars = [
+  # User-check 4: merge env vars for sidecar-instrumentation with user-provided env vars for agent-configuration
+  # (ignore any module-controlled env vars that user provides in var.datadog_sidecar.env_vars)
+  required_module_sidecar_env_vars = [
     {
       env_name  = "DD_API_KEY"
       env_value = var.datadog_api_key
@@ -178,8 +196,8 @@ locals {
       env_value = tostring(var.datadog_sidecar.health_port)
     },
   ]
-  all_sidecar_env_vars = concat(
-    local.required_sidecar_env_vars,
+  all_module_sidecar_env_vars = concat(
+    local.required_module_sidecar_env_vars,
     var.datadog_version != null ? [{
       env_name  = "DD_VERSION"
       env_value = var.datadog_version
@@ -202,6 +220,17 @@ locals {
       env_name  = "DD_SERVERLESS_LOG_PATH"
       env_value = var.datadog_logging_path
     }] : [],
+  )
+  agent_env_vars = [ # user-provided env vars for agent-configuration, filter out the ones that are module-controlled
+    for env in coalesce(var.datadog_sidecar.env_vars, []) : {
+      env_name = env.name
+      env_value = env.value
+    }
+    if !contains(local.module_controlled_env_vars, env.name)
+  ]
+  all_sidecar_env_vars = concat(
+    local.agent_env_vars,
+    local.all_module_sidecar_env_vars
   )
 
 }
