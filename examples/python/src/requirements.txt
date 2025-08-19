@@ -1,5 +1,4 @@
-Flask==3.0.3
-gunicorn==23.0.0
-werkzeug>=3.0.6
-ddtrace
-datadog
+datadog==0.52.1
+ddtrace==3.11.2
+Flask==3.1.1
+gunicorn==21.2.0
