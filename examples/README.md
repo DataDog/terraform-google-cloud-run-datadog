@@ -46,7 +46,7 @@ export REPO_NAME="your-artifact-registry-repo"
 export REGION="us-central1"  # Optional, defaults to us-central1
 ```
 
-Also ensure in the language's directory, that a `terraform.tfvars` file is created, with the following terraform variables set:
+Terraform requires several parameters to be passed in: you can either wait for script to run and prompt on each variable needed, or ensure in the language's directory, that a `terraform.tfvars` file is created, with these following Terraform variables set:
 ```terraform
 project="your-gcp-project-id"
 region="us-central1" # same value as $REGION, whatever region you pushed your docker image too
