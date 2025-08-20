@@ -3,7 +3,7 @@ provider "google" {
   region  = var.region
 }
 
-module "datadog-cloud-run-v2-wrapper" {
+module "datadog-cloud-run-v2-wrapper-python" {
   source = "../../"
   name = var.name
   location = var.region
@@ -11,12 +11,12 @@ module "datadog-cloud-run-v2-wrapper" {
 
   datadog_api_key = var.datadog_api_key
   datadog_site = "datadoghq.com"
-  datadog_service = "cloud-run-tf-python-example"
+  datadog_service = "cloud-run-tf-example"
   datadog_version = "1.0.0"
   datadog_tags = ["test:tag-example", "foo:tag-example-2"]
   datadog_env = "serverless"
   datadog_enable_logging = true
-  datadog_log_level = "debug"
+  datadog_log_level = "info"
   datadog_logging_path = "/shared-volume/logs/*.log"
   datadog_shared_volume = {
     name = "dd-shared-volume"
@@ -95,9 +95,9 @@ module "datadog-cloud-run-v2-wrapper" {
 
 
   # IAM Member to allow public access (optional, adjust as needed)
-resource "google_cloud_run_service_iam_member" "invoker" {
-  service  = module.datadog-cloud-run-v2-wrapper.name
-  location = module.datadog-cloud-run-v2-wrapper.location
+resource "google_cloud_run_service_iam_member" "invoker-python" {
+  service  = module.datadog-cloud-run-v2-wrapper-python.name
+  location = module.datadog-cloud-run-v2-wrapper-python.location
   role     = "roles/run.invoker"
   member   = "allUsers"
 }
