@@ -1,9 +1,16 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
 
 # Build and deploy script for in-process Cloud Run apps
 # Usage: ./build_and_deploy.sh <language>
 # Example: ./build_and_deploy.sh go
+
+set -auo pipefail
+
+if ! command -v terraform &> /dev/null; then
+    echo "Error: terraform command not found. Please install Terraform."
+    exit 1
+fi
+
 
 if [ $# -ne 1 ]; then
     echo "Usage: $0 <language>"

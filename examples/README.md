@@ -21,22 +21,33 @@ Use the build and deploy script:
 ./build_and_deploy.sh <language>
 ```
 
+### Destroy
+
+Use the destroy script to tear down the deployed Terraform resources:
+
+```bash
+./dstroy.sh <language>
+```
+
 ### Examples
 
 ```shell
-# Deploy Go application
+# Deploy Go application and destroy it after
 ./build_and_deploy.sh go
+./destroy.sh go
 
-# Deploy Python application
+# Deploy Python application and destroy it after
 ./build_and_deploy.sh python
+./destroy.sh python
 
-# Deploy Node.js application
+# Deploy Node.js application and destroy it after
 ./build_and_deploy.sh node
+./destroy.sh node
 ```
 
 ### Environment and Terraform Variables Required
 
-Before running the script, ensure these environment variables are set:
+Before running the build and deploy script, ensure these environment variables are set:
 
 ```bash
 export PROJECT_ID="your-gcp-project-id"
