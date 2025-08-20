@@ -11,12 +11,12 @@ module "datadog-cloud-run-v2-wrapper-python" {
 
   datadog_api_key = var.datadog_api_key
   datadog_site = "datadoghq.com"
-  datadog_service = "cloud-run-tf-example"
+  datadog_service = "cloud-run-tf-python-example"
   datadog_version = "1.0.0"
   datadog_tags = ["test:tag-example", "foo:tag-example-2"]
   datadog_env = "serverless"
   datadog_enable_logging = true
-  datadog_log_level = "info"
+  datadog_log_level = "debug"
   datadog_logging_path = "/shared-volume/logs/*.log"
   datadog_shared_volume = {
     name = "dd-shared-volume"

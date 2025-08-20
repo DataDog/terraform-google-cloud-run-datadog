@@ -1,6 +1,6 @@
-# Example: Deploying an Instrumented Python App to Cloud Run with Datadog
+# Example: Deploying an Instrumented Golang App to Cloud Run with Datadog
 
-This example demonstrates a step-by-step on how to use the `terraform-google-cloud-run-datadog` wrapper module to fully instrument a sample Python application with logs, metrics, and tracing using Datadog. If you're looking for a quick deploy, go to ../README.md for the build and deploy bash script.
+This example demonstrates a step-by-step on how to use the `terraform-google-cloud-run-datadog` wrapper module to fully instrument a sample Go application with logs, metrics, and tracing using Datadog. If you're looking for a quick deploy, go to ../README.md for the build and deploy bash script.
 
 ## Steps to Deploy
 Create a [Datadog API Key](https://app.datadoghq.com/organization-settings/api-keys)
@@ -49,7 +49,7 @@ terraform init
 terraform plan
 terrafrom apply
 ```
-Your Python app is now fully instrumented with the Datadog sidecar agent. Tracing, logging, and metrics will be visible in Datadog Serverless Monitoring.
+Your Go app is now fully instrumented with the Datadog sidecar agent. Tracing, logging, and metrics will be visible in Datadog Serverless Monitoring.
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
@@ -62,19 +62,19 @@ Your Python app is now fully instrumented with the Datadog sidecar agent. Tracin
 
 | Name | Version |
 |------|---------|
-| <a name="provider_google"></a> [google](#provider\_google) | 6.34.0 |
+| <a name="provider_google"></a> [google](#provider\_google) | 6.49.0 |
 
 ## Modules
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_datadog-cloud-run-v2-wrapper-python"></a> [datadog-cloud-run-v2-wrapper-python](#module\_datadog-cloud-run-v2-wrapper-python) | ../../ | n/a |
+| <a name="module_datadog-cloud-run-v2-wrapper-go"></a> [datadog-cloud-run-v2-wrapper-go](#module\_datadog-cloud-run-v2-wrapper-go) | ../../ | n/a |
 
 ## Resources
 
 | Name | Type |
 |------|------|
-| [google_cloud_run_service_iam_member.invoker-python](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/cloud_run_service_iam_member) | resource |
+| [google_cloud_run_service_iam_member.invoker-go](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/cloud_run_service_iam_member) | resource |
 
 ## Inputs
 
@@ -82,7 +82,7 @@ Your Python app is now fully instrumented with the Datadog sidecar agent. Tracin
 |------|-------------|------|---------|:--------:|
 | <a name="input_datadog_api_key"></a> [datadog\_api\_key](#input\_datadog\_api\_key) | The api key for datadog | `string` | n/a | yes |
 | <a name="input_image"></a> [image](#input\_image) | The image to deploy the service to | `string` | `"us-docker.pkg.dev/cloudrun/container/hello"` | no |
-| <a name="input_name"></a> [name](#input\_name) | The name of the Cloud Run service | `string` | `"cloud-run-tf-python-test"` | no |
+| <a name="input_name"></a> [name](#input\_name) | The name of the Cloud Run service | `string` | `"cloud-run-tf-example"` | no |
 | <a name="input_project"></a> [project](#input\_project) | The project ID to deploy the service to | `string` | n/a | yes |
 | <a name="input_region"></a> [region](#input\_region) | The region to deploy the service to (used in example for both google provider region and cloud run resource location) | `string` | n/a | yes |
 
