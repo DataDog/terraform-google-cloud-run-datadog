@@ -3,7 +3,7 @@ provider "google" {
   region  = var.region
 }
 
-module "datadog-cloud-run-v2-wrapper-php" {
+module "datadog-cloud-run-v2-php" {
   source = "../../"
   name = var.name
   location = var.region
@@ -96,8 +96,8 @@ module "datadog-cloud-run-v2-wrapper-php" {
 
   # IAM Member to allow public access (optional, adjust as needed)
 resource "google_cloud_run_service_iam_member" "invoker-php" {
-  service  = module.datadog-cloud-run-v2-wrapper-php.name
-  location = module.datadog-cloud-run-v2-wrapper-php.location
+  service  = module.datadog-cloud-run-v2-php.name
+  location = module.datadog-cloud-run-v2-php.location
   role     = "roles/run.invoker"
   member   = "allUsers"
 }

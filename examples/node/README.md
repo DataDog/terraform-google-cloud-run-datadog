@@ -1,6 +1,6 @@
 # Example: Deploying an Instrumented Node.js App to Cloud Run with Datadog
 
-This example demonstrates a step-by-step on how to use the `terraform-google-cloud-run-datadog` wrapper module to fully instrument a sample Node.js application with logs, metrics, and tracing using Datadog. If you're looking for a quick deploy, go to ../README.md for the build and deploy bash script.
+This example demonstrates a step-by-step on how to use the `terraform-google-cloud-run-datadog` wrapper module to fully instrument a sample Node.js application with logs, metrics, and tracing using Datadog. If you're looking for a quick deploy, go to [the main README](../README.md) for the build and deploy bash script.
 
 ## Steps to Deploy
 Create a [Datadog API Key](https://app.datadoghq.com/organization-settings/api-keys)

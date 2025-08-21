@@ -3,7 +3,7 @@ provider "google" {
   region  = var.region
 }
 
-module "datadog-cloud-run-v2-wrapper-ruby" {
+module "datadog-cloud-run-v2-ruby" {
   source = "../../"
   name = var.name
   location = var.region
@@ -96,8 +96,8 @@ module "datadog-cloud-run-v2-wrapper-ruby" {
 
   # IAM Member to allow public access (optional, adjust as needed)
 resource "google_cloud_run_service_iam_member" "invoker-ruby" {
-  service  = module.datadog-cloud-run-v2-wrapper-ruby.name
-  location = module.datadog-cloud-run-v2-wrapper-ruby.location
+  service  = module.datadog-cloud-run-v2-ruby.name
+  location = module.datadog-cloud-run-v2-ruby.location
   role     = "roles/run.invoker"
   member   = "allUsers"
 }

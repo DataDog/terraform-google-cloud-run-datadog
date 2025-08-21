@@ -3,7 +3,7 @@ provider "google" {
   region  = var.region
 }
 
-module "datadog-cloud-run-v2-wrapper-python" {
+module "datadog-cloud-run-v2-python" {
   source = "../../"
   name = var.name
   location = var.region
@@ -96,8 +96,8 @@ module "datadog-cloud-run-v2-wrapper-python" {
 
   # IAM Member to allow public access (optional, adjust as needed)
 resource "google_cloud_run_service_iam_member" "invoker-python" {
-  service  = module.datadog-cloud-run-v2-wrapper-python.name
-  location = module.datadog-cloud-run-v2-wrapper-python.location
+  service  = module.datadog-cloud-run-v2-python.name
+  location = module.datadog-cloud-run-v2-python.location
   role     = "roles/run.invoker"
   member   = "allUsers"
 }
