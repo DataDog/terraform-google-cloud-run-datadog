@@ -8,8 +8,8 @@
 using Serilog;
 
 var rawLogPath = Environment.GetEnvironmentVariable("DD_SERVERLESS_LOG_PATH");
-var LOG_FILE = string.IsNullOrEmpty(rawLogPath) ? "/shared-volume/logs/app.log" : rawLogPath.Replace("*.log", "app.log");
-Console.WriteLine($"LOG_FILE: {LOG_FILE}");
+var logFile = string.IsNullOrEmpty(rawLogPath) ? "/shared-volume/logs/app.log" : rawLogPath.Replace("*.log", "app.log");
+Console.WriteLine($"logFile: {logFile}");
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,10 +17,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseSerilog((context, config) =>
 {
     // Ensure the directory exists
-    Directory.CreateDirectory(Path.GetDirectoryName(LOG_FILE)!);
+    Directory.CreateDirectory(Path.GetDirectoryName(logFile)!);
 
     config.WriteTo.Console(new Serilog.Formatting.Json.JsonFormatter(renderMessage: true))
-          .WriteTo.File(new Serilog.Formatting.Json.JsonFormatter(renderMessage: true), LOG_FILE);
+          .WriteTo.File(new Serilog.Formatting.Json.JsonFormatter(renderMessage: true), logFile);
 });
 
 var app = builder.Build();

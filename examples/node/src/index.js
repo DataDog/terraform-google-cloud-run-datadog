@@ -14,6 +14,7 @@ const tracer = require('dd-trace').init({
 
 const express = require('express');
 const app = express();
+app.disable('X-Powered-By');
 
 const { createLogger, format, transports } = require('winston');
 

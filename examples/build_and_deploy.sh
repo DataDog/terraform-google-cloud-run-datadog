@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Build and deploy script for in-process Cloud Run apps
+# Build and deploy script for sidecar-instrumented Cloud Run apps
 # Usage: ./build_and_deploy.sh <language>
 # Example: ./build_and_deploy.sh go
 
