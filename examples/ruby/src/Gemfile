@@ -1,0 +1,6 @@
+source 'https://rubygems.org'
+
+gem 'sinatra'
+gem 'datadog', require: 'datadog/auto_instrument'
+gem 'rackup'
+gem 'puma'

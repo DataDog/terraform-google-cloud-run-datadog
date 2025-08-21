@@ -1,6 +1,6 @@
-# Example: Deploying an Instrumented Python App to Cloud Run with Datadog
+# Example: Deploying an Instrumented Ruby App to Cloud Run with Datadog
 
-This example demonstrates a step-by-step on how to use the `terraform-google-cloud-run-datadog` wrapper module to fully instrument a sample Python application with logs, metrics, and tracing using Datadog. If you're looking for a quick deploy, go to [the main README](../README.md) for the build and deploy bash script.
+This example demonstrates a step-by-step on how to use the `terraform-google-cloud-run-datadog` wrapper module to fully instrument a sample Ruby application with logs, metrics, and tracing using Datadog. If you're looking for a quick deploy, go to [the main README](../README.md) for the build and deploy bash script.
 
 ## Steps to Deploy
 Create a [Datadog API Key](https://app.datadoghq.com/organization-settings/api-keys)
@@ -49,7 +49,7 @@ terraform init
 terraform plan
 terrafrom apply
 ```
-Your Python app is now fully instrumented with the Datadog sidecar agent. Tracing, logging, and metrics will be visible in Datadog Serverless Monitoring.
+Your Ruby app is now fully instrumented with the Datadog sidecar agent. Tracing, logging, and metrics will be visible in Datadog Serverless Monitoring.
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
@@ -62,19 +62,19 @@ Your Python app is now fully instrumented with the Datadog sidecar agent. Tracin
 
 | Name | Version |
 |------|---------|
-| <a name="provider_google"></a> [google](#provider\_google) | 6.34.0 |
+| <a name="provider_google"></a> [google](#provider\_google) | 6.49.1 |
 
 ## Modules
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_datadog-cloud-run-v2-python"></a> [datadog-cloud-run-v2-python](#module\_datadog-cloud-run-v2-python) | ../../ | n/a |
+| <a name="module_datadog-cloud-run-v2-ruby"></a> [datadog-cloud-run-v2-ruby](#module\_datadog-cloud-run-v2-ruby) | ../../ | n/a |
 
 ## Resources
 
 | Name | Type |
 |------|------|
-| [google_cloud_run_service_iam_member.invoker-python](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/cloud_run_service_iam_member) | resource |
+| [google_cloud_run_service_iam_member.invoker-ruby](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/cloud_run_service_iam_member) | resource |
 
 ## Inputs
 

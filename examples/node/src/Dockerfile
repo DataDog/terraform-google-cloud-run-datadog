@@ -5,14 +5,18 @@
 # Datadog (https://www.datadoghq.com/)
 # Copyright 2025-present Datadog, Inc.
 
-FROM python:3.13-slim
+FROM node:22-slim
 
-WORKDIR /app/
+WORKDIR /app
 
-COPY requirements.txt app.py ./
-RUN pip install --no-cache-dir -r requirements.txt
+COPY package.json .
+RUN npm install
 
+COPY . .
+
+ENV PORT=8080
 EXPOSE 8080
 
-# Apply the auto-instrumentation provided by the ddtrace dependency.
-CMD ["ddtrace-run", "python", "app.py"]
+ENV NODE_OPTIONS="--require dd-trace/init"
+
+CMD ["node", "index.js"]
