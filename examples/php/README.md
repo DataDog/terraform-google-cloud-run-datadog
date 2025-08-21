@@ -68,7 +68,7 @@ Your PHP app is now fully instrumented with the Datadog sidecar agent. Tracing, 
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_datadog-cloud-run-v2-wrapper-php"></a> [datadog-cloud-run-v2-wrapper-php](#module\_datadog-cloud-run-v2-wrapper-php) | ../../ | n/a |
+| <a name="module_datadog-cloud-run-v2-php"></a> [datadog-cloud-run-v2-php](#module\_datadog-cloud-run-v2-php) | ../../ | n/a |
 
 ## Resources
 

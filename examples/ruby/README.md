@@ -62,13 +62,13 @@ Your Ruby app is now fully instrumented with the Datadog sidecar agent. Tracing,
 
 | Name | Version |
 |------|---------|
-| <a name="provider_google"></a> [google](#provider\_google) | >= 6.34.0 |
+| <a name="provider_google"></a> [google](#provider\_google) | 6.49.1 |
 
 ## Modules
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_datadog-cloud-run-v2-wrapper-ruby"></a> [datadog-cloud-run-v2-wrapper-ruby](#module\_datadog-cloud-run-v2-wrapper-ruby) | ../../ | n/a |
+| <a name="module_datadog-cloud-run-v2-ruby"></a> [datadog-cloud-run-v2-ruby](#module\_datadog-cloud-run-v2-ruby) | ../../ | n/a |
 
 ## Resources
 

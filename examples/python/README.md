@@ -68,7 +68,7 @@ Your Python app is now fully instrumented with the Datadog sidecar agent. Tracin
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_datadog-cloud-run-v2-wrapper-python"></a> [datadog-cloud-run-v2-wrapper-python](#module\_datadog-cloud-run-v2-wrapper-python) | ../../ | n/a |
+| <a name="module_datadog-cloud-run-v2-python"></a> [datadog-cloud-run-v2-python](#module\_datadog-cloud-run-v2-python) | ../../ | n/a |
 
 ## Resources
 
@@ -82,7 +82,7 @@ Your Python app is now fully instrumented with the Datadog sidecar agent. Tracin
 |------|-------------|------|---------|:--------:|
 | <a name="input_datadog_api_key"></a> [datadog\_api\_key](#input\_datadog\_api\_key) | The api key for datadog | `string` | n/a | yes |
 | <a name="input_image"></a> [image](#input\_image) | The image to deploy the service to | `string` | `"us-docker.pkg.dev/cloudrun/container/hello"` | no |
-| <a name="input_name"></a> [name](#input\_name) | The name of the Cloud Run service | `string` | `"cloud-run-tf-python-test"` | no |
+| <a name="input_name"></a> [name](#input\_name) | The name of the Cloud Run service | `string` | `"cloud-run-tf-example"` | no |
 | <a name="input_project"></a> [project](#input\_project) | The project ID to deploy the service to | `string` | n/a | yes |
 | <a name="input_region"></a> [region](#input\_region) | The region to deploy the service to (used in example for both google provider region and cloud run resource location) | `string` | n/a | yes |
 

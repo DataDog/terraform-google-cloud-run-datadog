@@ -68,7 +68,7 @@ Your Go app is now fully instrumented with the Datadog sidecar agent. Tracing, l
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_datadog-cloud-run-v2-wrapper-go"></a> [datadog-cloud-run-v2-wrapper-go](#module\_datadog-cloud-run-v2-wrapper-go) | ../../ | n/a |
+| <a name="module_datadog-cloud-run-v2-go"></a> [datadog-cloud-run-v2-go](#module\_datadog-cloud-run-v2-go) | ../../ | n/a |
 
 ## Resources
 

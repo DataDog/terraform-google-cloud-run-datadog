@@ -68,7 +68,7 @@ Your Dotnet app is now fully instrumented with the Datadog sidecar agent. Tracin
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_datadog-cloud-run-v2-wrapper-dotnet"></a> [datadog-cloud-run-v2-wrapper-dotnet](#module\_datadog-cloud-run-v2-wrapper-dotnet) | ../../ | n/a |
+| <a name="module_datadog-cloud-run-v2-dotnet"></a> [datadog-cloud-run-v2-dotnet](#module\_datadog-cloud-run-v2-dotnet) | ../../ | n/a |
 
 ## Resources
 
