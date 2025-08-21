@@ -17,7 +17,7 @@ variable "region" {
 variable "name" {
   type        = string
   description = "The name of the Cloud Run service"
-  default     = "cloud-run-tf-python-test"
+  default     = "cloud-run-tf-example"
   nullable    = false
 }
 
