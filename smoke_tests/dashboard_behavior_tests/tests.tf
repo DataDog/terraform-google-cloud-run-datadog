@@ -100,6 +100,41 @@ module "module-no-logs" {
 }
 
 # Trace enabled or not: when DD_TRACE_ENABLED is false, no traces should appear in the dashboard
+module "module-no-traces" {
+  source = "../../"
+  name = "cloudrun-test-no-traces"
+  location = var.region
+  deletion_protection = false
+
+  datadog_service = "cloudrun-test-no-traces"
+  datadog_api_key = var.datadog_api_key
+  datadog_site = "datadoghq.com"
+  datadog_version = "1.0.0"
+  datadog_env = "serverless"
+  datadog_enable_tracing = false
+
+  datadog_sidecar = {
+    #uses default sidecar image, name, resources, healthport
+    image = "gcr.io/datadoghq/serverless-init:latest"
+    name = "datadog-sidecar"
+    health_port = 5555
+  }
+
+
+  template = {
+    containers = [
+        { # deploying should see no traces in the dashboard
+            name = "app-container-no-tracing"
+            image = "europe-west1-docker.pkg.dev/datadog-serverless-gcp-demo/cloud-run-source-deploy/cloud-run-tftest-node:latest"
+            ports = {
+                container_port = 8080
+            }
+        }
+    ]
+  }
+
+}
+
 
 
 resource "google_cloud_run_service_iam_member" "invoker_logs_injection" {
@@ -112,6 +147,13 @@ resource "google_cloud_run_service_iam_member" "invoker_logs_injection" {
 resource "google_cloud_run_service_iam_member" "invoker_no_logs" {  
   service  = module.module-no-logs.name
   location = module.module-no-logs.location
+  role     = "roles/run.invoker"
+  member   = "allUsers"
+}
+
+resource "google_cloud_run_service_iam_member" "invoker_no_traces" {
+  service  = module.module-no-traces.name
+  location = module.module-no-traces.location
   role     = "roles/run.invoker"
   member   = "allUsers"
 }
