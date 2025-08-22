@@ -7,7 +7,7 @@
 # Tests when user provides env vars for agent-configuration, the non-module-controlled env vars should be reflected in outputs and UI
 module "sidecar-user-env-vars-test" {
     source = "../../"
-    name = "cloudrun-sidecar-user-env-vars-test"
+    name = "cloudrun-test-sidecar-user-env-vars-test"
     location = var.region
     deletion_protection = false
 
@@ -80,7 +80,7 @@ module "sidecar-user-env-vars-test" {
             },
             {
                 name = "DD_TRACE_ENABLED"
-                value = "not a field so ADD THIS"
+                value = "not a module-controlled field so add this"
             },
             {
                 name = "NEW_ENV_VAR"
