@@ -55,6 +55,12 @@ variable "datadog_enable_logging" {
   default     = true
 }
 
+variable "datadog_enable_tracing" {
+  type        = bool
+  description = "Enables tracing. Defaults to true."
+  default     = true
+}
+
 variable "datadog_logging_path" {
   type        = string
   description = "Datadog logging path to be used for log collection if var.datadog_enable_logging is true. Must begin with path given in var.datadog_shared_volume.mount_path."
@@ -138,8 +144,9 @@ locals {
     "DD_ENV",
     "DD_TAGS",
     "DD_LOG_LEVEL",
-    "DD_LOGS_INJECTION",
     "DD_SERVERLESS_LOG_PATH",
+    "DD_LOGS_INJECTION", # this is not an env var needed on the sidecar anyways
+    "DD_TRACE_ENABLED", # this is not an env var needed on the sidecar anyways
   ]
 
 
@@ -348,6 +355,15 @@ resource "google_cloud_run_v2_service" "this" {
           content {
             name  = "DD_SERVICE"
             value = local.datadog_service
+          }
+        }
+
+        # if user provides a container-level DD_TRACE_ENABLED env var, we use the more specific value, else we use the module-computed value
+        dynamic "env" {
+          for_each = contains([for env in coalesce(containers.value.env, []) : env.name], "DD_TRACE_ENABLED") ? [] : [true]
+          content {
+            name  = "DD_TRACE_ENABLED"
+            value = var.datadog_enable_tracing ? "true" : "false"
           }
         }
         # if user provides a container-level DD_LOGS_INJECTION env var, we use the more specific value (and should not set DD_LOGS_INJECTION here), 
