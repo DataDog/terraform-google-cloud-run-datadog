@@ -6,6 +6,30 @@ There are three main areas for testing:
 2. **Infrastructure validation**: resource, containers, volumes, and volume mounts created by the module.
 3. **End-to-end functionality**: The variables set produce the expected behavior visible in the Datadog dashboard (toggling traces/logging on/off, etc).
 
+To test, cd into any of the 3 subdirectories.
+* Create a [Datadog API Key](https://app.datadoghq.com/organization-settings/api-keys)
+* Create a `terraform.tfvars` file
+  - Set the `datadog_api_key` to the value of the key you just created
+  - Set the `name` to the name of the Cloud Run UI service you want to use, and will be used to filter for the resource in Datadog
+  - Set the `image` to the container image link you plan to use for your main app container
+  - Set the `project` to the GCP project ID
+  - Set the `region` to the region you are deploying your service to (and same region as the one used in image link)
+* Run the following commands
+
+```
+terraform init
+terraform plan
+terraform apply
+```
+
+Confirm that the Cloud Run services were all created as expected.
+
+Run the following commands to clean up the environment:
+
+```
+terraform destroy
+```
+
 ---
 
 ## 1. Environment Variables Check
@@ -113,3 +137,4 @@ Lastly, verify the IAC confiugration exhibits expected behavior on the Datadog d
 ### Tracing
 - If `var.datadog_enable_tracing = true`, traces appear in the dashboard
 - If tracing is disabled, no traces should show up
+
