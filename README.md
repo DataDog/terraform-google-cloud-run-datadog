@@ -14,46 +14,27 @@ This Terraform module wraps the [google_cloud_run_v2_resource](https://registry.
 
 ```
 module "datadog-cloud-run-v2-<language>" {
-  source = "../../"
+  source = "DataDog/cloud-run-datadog/google"
   name = var.name
   location = var.region
   deletion_protection = false
 
   datadog_api_key = "example-datadog-api-key"
-  datadog_site = "datadoghq.com"
   datadog_service = "cloud-run-tf-<language>-example"
   datadog_version = "1.0.0"
-  datadog_tags = ["test:tag-example", "foo:tag-example-2"]
   datadog_env = "serverless"
   datadog_enable_logging = true
-  datadog_enable_tracing = true
-  datadog_log_level = "debug"
-  datadog_logging_path = "/shared-volume/logs/*.log"
-  datadog_shared_volume = {
-    name = "dd-shared-volume"
-    mount_path = "/shared-volume"
-  }
 
 
   datadog_sidecar = {
-    #uses default sidecar image, name, resources, healthport
-    image = "gcr.io/datadoghq/serverless-init:latest"
-    name = "datadog-sidecar"
-    
-    resources = {
-      limits = {
-        cpu = "1"
-        memory = "512Mi"
-      }
-    }
-    health_port = 5555
+    # use default sidecar image, name, resources, healthport
   }
 
   template = {
     containers = [
       {
-        name = "cloudrun-tf-<language>-example"
-        image = "language-specific-app-container-image-link"
+        name = "my-cloud-run-app"
+        image = "us-docker.pkg.dev/cloudrun/container/hello"
         resources = {
           limits = {
             cpu    = "1"
@@ -70,9 +51,7 @@ module "datadog-cloud-run-v2-<language>" {
 }
 ```
 
-The module syntax is the same regardless of runtime because language is isolated in its image container link.
-
-**Note!!** Make sure exactly one of the containers passed into `template.containers` has a `ports` block:
+**Note:** Make sure exactly one of the containers passed into `template.containers` has a `ports` block:
 ```
 ports = {
     container_port = <Port number>
@@ -208,13 +187,12 @@ No modules.
 | <a name="input_client_version"></a> [client\_version](#input\_client\_version) | Arbitrary version identifier for the API client. | `string` | `null` | no |
 | <a name="input_custom_audiences"></a> [custom\_audiences](#input\_custom\_audiences) | One or more custom audiences that you want this service to support. Specify each custom audience as the full URL in a string. The custom audiences are encoded in the token and used to authenticate requests.<br/>For more information, see https://cloud.google.com/run/docs/configuring/custom-audiences. | `list(string)` | `null` | no |
 | <a name="input_datadog_api_key"></a> [datadog\_api\_key](#input\_datadog\_api\_key) | Datadog API key | `string` | n/a | yes |
-| <a name="input_datadog_enable_logging"></a> [datadog\_enable\_logging](#input\_datadog\_enable\_logging) | Enables log collection. Defaults to true. Make sure to provide both var.datadog\_shared\_volume and var.datadog\_logging\_path. | `bool` | `true` | no |
-| <a name="input_datadog_enable_tracing"></a> [datadog\_enable\_tracing](#input\_datadog\_enable\_tracing) | Enables tracing. Defaults to true. | `bool` | `true` | no |
+| <a name="input_datadog_enable_logging"></a> [datadog\_enable\_logging](#input\_datadog\_enable\_logging) | Enables log collection. Defaults to true. | `bool` | `true` | no |
 | <a name="input_datadog_env"></a> [datadog\_env](#input\_datadog\_env) | Datadog Environment tag, used for Unified Service Tagging. | `string` | `null` | no |
 | <a name="input_datadog_log_level"></a> [datadog\_log\_level](#input\_datadog\_log\_level) | Datadog agent's level of log output in Cloud Run UI, from most to least output: TRACE, DEBUG, INFO, WARN, ERROR, CRITICAL | `string` | `null` | no |
-| <a name="input_datadog_logging_path"></a> [datadog\_logging\_path](#input\_datadog\_logging\_path) | Datadog logging path to be used for log collection if var.datadog\_enable\_logging is true. Must begin with path given in var.datadog\_shared\_volume.mount\_path. | `string` | `"/shared-volume/logs/*.log"` | no |
+| <a name="input_datadog_logging_path"></a> [datadog\_logging\_path](#input\_datadog\_logging\_path) | Datadog logging path to be used for log collection. Ensure var.datadog\_enable\_logging is true. Must begin with path given in var.datadog\_shared\_volume.mount\_path. | `string` | `"/shared-volume/logs/*.log"` | no |
 | <a name="input_datadog_service"></a> [datadog\_service](#input\_datadog\_service) | Datadog Service tag, used for Unified Service Tagging. | `string` | `null` | no |
-| <a name="input_datadog_shared_volume"></a> [datadog\_shared\_volume](#input\_datadog\_shared\_volume) | Datadog shared volume for log collection. Note: will always be of type empty\_dir and in-memory. If a volume with this name is provided as part of var.template.volumes, it will be overridden. | <pre>object({<br/>    name       = string<br/>    mount_path = string<br/>    size_limit = optional(string)<br/>  })</pre> | <pre>{<br/>  "mount_path": "/shared-volume",<br/>  "name": "shared-volume"<br/>}</pre> | no |
+| <a name="input_datadog_shared_volume"></a> [datadog\_shared\_volume](#input\_datadog\_shared\_volume) | Datadog shared volume for log collection. Ensure var.datadog\_enable\_logging is true. Note: will always be of type empty\_dir and in-memory. If a volume with this name is provided as part of var.template.volumes, it will be overridden. | <pre>object({<br/>    name       = string<br/>    mount_path = string<br/>    size_limit = optional(string)<br/>  })</pre> | <pre>{<br/>  "mount_path": "/shared-volume",<br/>  "name": "shared-volume"<br/>}</pre> | no |
 | <a name="input_datadog_sidecar"></a> [datadog\_sidecar](#input\_datadog\_sidecar) | Datadog sidecar configuration. Nested attributes include:<br/>- image - Image for version of Datadog agent to use.<br/>- name - Name of the sidecar container.<br/>- resources - Resources like for any cloud run container.<br/>- startup\_probe - Startup probe settings only for failure\_threshold, initial\_delay\_seconds, period\_seconds, timeout\_seconds.<br/>- health\_port - Health port to start the startup probe.<br/>- env\_vars - List of environment variables with name and value fieldsfor customizing Datadog agent configuration, if any. | <pre>object({<br/>    image = optional(string, "gcr.io/datadoghq/serverless-init:latest")<br/>    name  = optional(string, "datadog-sidecar")<br/>    resources = optional(object({<br/>      limits = optional(object({<br/>        cpu    = optional(string, "1")<br/>        memory = optional(string, "512Mi")<br/>      }), null),<br/>      }), { # default sidecar resources<br/>      limits = {<br/>        cpu    = "1"<br/>        memory = "512Mi"<br/>      }<br/>    })<br/>    startup_probe = optional(<br/>      object({<br/>        failure_threshold     = optional(number),<br/>        initial_delay_seconds = optional(number),<br/>        period_seconds        = optional(number),<br/>        timeout_seconds       = optional(number),<br/>      }),<br/>      { # default startup probe<br/>        failure_threshold = 3<br/>        period_seconds = 10<br/>        initial_delay_seconds = 0<br/>        timeout_seconds = 1<br/>      }<br/>    )<br/>    health_port = optional(number, 5555) # DD_HEALTH_PORT<br/>    env_vars = optional(list(object({ # user-customizable env vars for Datadog agent configuration<br/>      name = string<br/>      value = string<br/>    })), null)<br/><br/>  })</pre> | n/a | yes |
 | <a name="input_datadog_site"></a> [datadog\_site](#input\_datadog\_site) | Datadog site | `string` | `"datadoghq.com"` | no |
 | <a name="input_datadog_tags"></a> [datadog\_tags](#input\_datadog\_tags) | Datadog tags | `list(string)` | `null` | no |

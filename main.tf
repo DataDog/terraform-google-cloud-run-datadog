@@ -51,13 +51,13 @@ variable "datadog_tags" {
 
 variable "datadog_enable_logging" {
   type        = bool
-  description = "Enables log collection. Defaults to true. Make sure to provide both var.datadog_shared_volume and var.datadog_logging_path."
+  description = "Enables log collection. Defaults to true."
   default     = true
 }
 
 variable "datadog_logging_path" {
   type        = string
-  description = "Datadog logging path to be used for log collection if var.datadog_enable_logging is true. Must begin with path given in var.datadog_shared_volume.mount_path."
+  description = "Datadog logging path to be used for log collection. Ensure var.datadog_enable_logging is true. Must begin with path given in var.datadog_shared_volume.mount_path."
   default     = "/shared-volume/logs/*.log"
 }
 
@@ -73,7 +73,7 @@ variable "datadog_shared_volume" {
     mount_path = string
     size_limit = optional(string)
   })
-  description = "Datadog shared volume for log collection. Note: will always be of type empty_dir and in-memory. If a volume with this name is provided as part of var.template.volumes, it will be overridden."
+  description = "Datadog shared volume for log collection. Ensure var.datadog_enable_logging is true. Note: will always be of type empty_dir and in-memory. If a volume with this name is provided as part of var.template.volumes, it will be overridden."
   default = {
     name       = "shared-volume"
     mount_path = "/shared-volume"
