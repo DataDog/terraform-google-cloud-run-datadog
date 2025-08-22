@@ -86,8 +86,6 @@ variable "datadog_shared_volume" {
   }
 }
 
-# TODO: DD_TRACE_ENABLED (does not work), ask about fips,  ..llmobs?
-
 variable "datadog_sidecar" {
   type = object({
     image = optional(string, "gcr.io/datadoghq/serverless-init:latest")

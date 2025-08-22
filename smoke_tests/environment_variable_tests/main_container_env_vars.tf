@@ -5,7 +5,6 @@
 # # - when DD_LOGS_INJECTION is provided on container-level template.containers.env, it should override the module-computed value
 # # - when DD_LOGS_INJECTION is not provided on container-level template.containers.env, module-computed value should be used
 
-
 provider "google" {
   project = var.project
   region  = var.region
@@ -16,7 +15,7 @@ provider "google" {
 # DD_LOGS_INJECTION can be set to false at module level, and is NOT set for all containers
 module "module-level-override" {
   source = "../../"
-  name = "cloudrun-main-module-override-module-defaults"
+  name = "cloudrun-test-main-module-override-module-defaults"
   location = var.region
   deletion_protection = false
 
@@ -64,7 +63,7 @@ module "module-level-override" {
 # DD_LOGS_INJECTION should be true for all containers bc module default is true
 module "module-name-default" {
   source = "../../"
-  name = "cloudrun-main-module-name-default-and-service-name-used"
+  name = "cloudrun-test-main-module-name-default-and-service-name-used"
   location = var.region
   deletion_protection = false
 
@@ -114,7 +113,7 @@ module "module-name-default" {
 # DD_LOGS_INJECTION can be set to false at container-level, and is false for that container
 module "container-level-override" {
   source = "../../"
-  name = "cloudrun-main-container-level-override"
+  name = "cloudrun-test-main-container-level-override"
   location = var.region
   deletion_protection = false
 
@@ -153,7 +152,7 @@ module "container-level-override" {
             env = [
                 {name = "DD_SERVICE", value = "service-value-used-from-container-in-main"}, # should be used because provided in var.template.containers[*].env, more specific
                 {name = "DD_SERVERLESS_LOG_PATH", value = "logging-path-that-should-be-ignored"}, # should be ignored, because module does not support user-setting this var in var.template.containers.env
-                {name = "DD_LOGS_INJECTION", value = "false"} # should be false because provided in var.template.containers[*].env, more specific
+                {name = "DD_LOGS_INJECTION", value = "false"}, # should be false because provided in var.template.containers[*].env, more specific
             ]
         },
     ]
