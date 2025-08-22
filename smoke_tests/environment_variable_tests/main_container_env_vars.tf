@@ -4,6 +4,7 @@
 # # - when DD_SERVERLESS_LOG_PATH is provided on container-level template.containers.env, it should be ignored, and the module-computed value should be used
 # # - when DD_LOGS_INJECTION is provided on container-level template.containers.env, it should override the module-computed value
 # # - when DD_LOGS_INJECTION is not provided on container-level template.containers.env, module-computed value should be used
+# # - when DD_TRACE_ENABLED is provided on container-level template.containers.env, it should override the module-computed value, when false, no traces should appear in the dashboard
 
 
 provider "google" {
@@ -14,9 +15,10 @@ provider "google" {
 # test that when provided on module, module-set DD_SERVICE should override the cloud run service name
 # test that when var.datadog_logging_path is provided on module, it should be used for DD_SERVERLESS_LOG_PATH env var in main containers, and in sidecar container
 # DD_LOGS_INJECTION can be set to false at module level, and is NOT set for all containers
+# DD_TRACE_ENABLED can be set to false at module level, and is NOT set for all containers
 module "module-level-override" {
   source = "../../"
-  name = "cloudrun-main-module-override-module-defaults"
+  name = "cloudrun-test-main-module-override-module-defaults"
   location = var.region
   deletion_protection = false
 
@@ -26,6 +28,7 @@ module "module-level-override" {
   datadog_version = "1.0.0"
   datadog_env = "serverless"
   datadog_enable_logging = false
+  datadog_enable_tracing = false
   datadog_log_level = "debug"
   datadog_logging_path = "/shared-volume/testlogs/*.log"
   datadog_shared_volume = {
@@ -62,9 +65,10 @@ module "module-level-override" {
 # test that when var.datadog_service is left empty on module, it should default to cloud run service name
 #test that when DD_SERVERLESS_LOG_PATH is left empty on module, it should default to /shared-volume/logs/*.log
 # DD_LOGS_INJECTION should be true for all containers bc module default is true
+# DD_TRACE_ENABLED should be true for all containers bc module default is true
 module "module-name-default" {
   source = "../../"
-  name = "cloudrun-main-module-name-default-and-service-name-used"
+  name = "cloudrun-test-main-module-name-default-and-service-name-used"
   location = var.region
   deletion_protection = false
 
@@ -112,9 +116,10 @@ module "module-name-default" {
 # when DD_SERVICE is provided in template.containers.env, the container-level value should be used in main containers
 # when DD_SERVERLESS_LOG_PATH is provided in template.containers.env, it should be ignored, and the module-computed var.datadog_logging_path should be used in main and sidecar containers
 # DD_LOGS_INJECTION can be set to false at container-level, and is false for that container
+# DD_TRACE_ENABLED can be set to false at container-level, and is false for that container
 module "container-level-override" {
   source = "../../"
-  name = "cloudrun-main-container-level-override"
+  name = "cloudrun-test-main-container-level-override"
   location = var.region
   deletion_protection = false
 
@@ -124,6 +129,7 @@ module "container-level-override" {
   datadog_version = "1.0.0"
   datadog_env = "serverless"
   datadog_enable_logging = true
+  datadog_enable_tracing = true
   datadog_log_level = "debug"
   datadog_logging_path = "/shared-volume/logs/*.log"
   datadog_shared_volume = {
@@ -153,7 +159,8 @@ module "container-level-override" {
             env = [
                 {name = "DD_SERVICE", value = "service-value-used-from-container-in-main"}, # should be used because provided in var.template.containers[*].env, more specific
                 {name = "DD_SERVERLESS_LOG_PATH", value = "logging-path-that-should-be-ignored"}, # should be ignored, because module does not support user-setting this var in var.template.containers.env
-                {name = "DD_LOGS_INJECTION", value = "false"} # should be false because provided in var.template.containers[*].env, more specific
+                {name = "DD_LOGS_INJECTION", value = "false"}, # should be false because provided in var.template.containers[*].env, more specific
+                {name = "DD_TRACE_ENABLED", value = "false"} # should be false because provided in var.template.containers[*].env, more specific
             ]
         },
     ]
