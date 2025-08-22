@@ -89,7 +89,7 @@ These variables present in configuring the sidecar must **always use the module-
 
 - If no `var.datadog_sidecar.env_vars` are provided, all module-level variables are injected as given.
 - If `var.datadog_sidecar.env_vars` is provided, all user-defined variables NOT managed by var.datadog_* parameters are surfaced in the Cloud Run UI.
-- If a user attempts to redefine a module-managed variable (listed above), the module value should take precedence.
+- If a user attempts to redefine a module-managed variable (listed above), the module value should take be used instead.
 
 
 ## 2. Infrastructure Check
