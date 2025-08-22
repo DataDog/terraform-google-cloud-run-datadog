@@ -1,6 +1,6 @@
 # # # TESTING FOR: sidecar environment variables, priority between user input and module-computed values
 # # - all module-controlled env vars should be ignored if user provides them in var.datadog_sidecar.env_vars
-# # - i.e. DD_API_KEY, DD_SITE, DD_SERVICE, DD_HEALTH_PORT, DD_VERSION, DD_ENV, DD_TAGS, DD_LOG_LEVEL, DD_SERVERLESS_LOG_PATH, DD_TRACE_ENABLED
+# # - i.e. DD_API_KEY, DD_SITE, DD_SERVICE, DD_HEALTH_PORT, DD_VERSION, DD_ENV, DD_TAGS, DD_LOG_LEVEL, DD_SERVERLESS_LOG_PATH
 # # - user-provided env vars for values not in the module-controlled list should be reflected in outputs and UI
 
 # Tests when user provides env vars for sidecar-instrumentation, all module-controlled env vars should be ignored
@@ -80,7 +80,7 @@ module "sidecar-user-env-vars-test" {
             },
             {
                 name = "DD_TRACE_ENABLED"
-                value = "user-value-should-not-be-used"
+                value = "not a module-controlled field so add this"
             },
             {
                 name = "NEW_ENV_VAR"
