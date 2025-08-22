@@ -69,7 +69,7 @@ variable "datadog_logging_path" {
 
 variable "datadog_log_level" {
   type        = string
-  description = "Datadog log level"
+  description = "Datadog agent's level of log output in Cloud Run UI, from most to least output: TRACE, DEBUG, INFO, WARN, ERROR, CRITICAL"
   default     = null
 }
 
