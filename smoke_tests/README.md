@@ -56,11 +56,6 @@ We test the behavior of the following variables:
 - Setting `DD_SERVICE` at the module level should propagate to the container-level and Cloud Run UI.
 - Not setting at module level should resort to using default value (Cloud Run service name) aka `var.name`
 
-#### `DD_TRACE_ENABLED`
-
-- Container-level `DD_TRACE_ENABLED` takes precedence over module's
-- If not set at the module level, the default is `true`
-
 #### `DD_SERVERLESS_LOG_PATH`
 
 - Container-level values are ignored — always use `var.datadog_logging_path`
@@ -127,7 +122,7 @@ We must also verify the module creates and configures the infrastructure compone
 
 ## 3. Dashboard observability
 
-Lastly, verify the IAC confiugration exhibits expected behavior on the Datadog dashboard.
+Lastly, verify the module's IAC configuration exhibits expected behavior on the Datadog dashboard.
 
 ### Logs Injection
 
@@ -137,8 +132,4 @@ Lastly, verify the IAC confiugration exhibits expected behavior on the Datadog d
 
 - If `var.datadog_enable_logging = true`, logs show up
 - If logging is disabled, no logs should appear in dashboard
-
-### Tracing
-- If `var.datadog_enable_tracing = true`, traces appear in the dashboard
-- If tracing is disabled, no traces should show up
 
