@@ -85,8 +85,8 @@ ports = {
 ### Module syntax
 #### Wraps google_cloud_run_v2_service resource
 - Arguments available in the [google_cloud_run_v2_service](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/cloud_run_v2_service#argument-reference) resource are available in this Terraform module.
-- All blocks (template, containers, volumes, etc) in the resource are represented in the module as objects with required types - insert an "=" 
-- Any optional blocks with 0-many occurrences are represented as a list-collection of objects with the same types/parameters as the blocks
+- All blocks (template, containers, volumes, etc) in the resource are represented in the module as objects with required types - insert an `=`
+- Any resource optional blocks that can occur multiple times are represented as a list-collection of objects with the same types/parameters as the blocks
 - See [variables.tf](variables.tf) for the complete list of variables, or the table below for full syntax details/examples
 
 #### Datadog Variables
@@ -130,7 +130,7 @@ If you've an established resource instrumentation but would like to switch to th
    }
 ```
 
-##### gogle_cloud_run_v2_service resource
+##### google_cloud_run_v2_service resource
 ```
 resource "google_cloud_run_v2_service" "example_cloud_run_service" {
   name = "cloud-run-example"  
