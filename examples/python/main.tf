@@ -16,7 +16,6 @@ module "datadog-cloud-run-v2-python" {
   datadog_tags = ["test:tag-example", "foo:tag-example-2"]
   datadog_env = "serverless"
   datadog_enable_logging = true
-  datadog_enable_tracing = true
   datadog_log_level = "debug"
   datadog_logging_path = "/shared-volume/logs/*.log"
   datadog_shared_volume = {
