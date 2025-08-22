@@ -51,19 +51,19 @@ variable "datadog_tags" {
 
 variable "datadog_enable_logging" {
   type        = bool
-  description = "Enables log collection. Defaults to true. Make sure to provide both var.datadog_shared_volume and var.datadog_logging_path."
+  description = "Enables log collection. Defaults to true."
   default     = true
 }
 
 variable "datadog_logging_path" {
   type        = string
-  description = "Datadog logging path to be used for log collection if var.datadog_enable_logging is true. Must begin with path given in var.datadog_shared_volume.mount_path."
+  description = "Datadog logging path to be used for log collection. Ensure var.datadog_enable_logging is true. Must begin with path given in var.datadog_shared_volume.mount_path."
   default     = "/shared-volume/logs/*.log"
 }
 
 variable "datadog_log_level" {
   type        = string
-  description = "Datadog log level"
+  description = "Datadog agent's level of log output in Cloud Run UI, from most to least output: TRACE, DEBUG, INFO, WARN, ERROR, CRITICAL"
   default     = null
 }
 
@@ -73,7 +73,7 @@ variable "datadog_shared_volume" {
     mount_path = string
     size_limit = optional(string)
   })
-  description = "Datadog shared volume for log collection. Note: will always be of type empty_dir and in-memory. If a volume with this name is provided as part of var.template.volumes, it will be overridden."
+  description = "Datadog shared volume for log collection. Ensure var.datadog_enable_logging is true. Note: will always be of type empty_dir and in-memory. If a volume with this name is provided as part of var.template.volumes, it will be overridden."
   default = {
     name       = "shared-volume"
     mount_path = "/shared-volume"
@@ -136,8 +136,8 @@ locals {
     "DD_ENV",
     "DD_TAGS",
     "DD_LOG_LEVEL",
-    "DD_LOGS_INJECTION",
     "DD_SERVERLESS_LOG_PATH",
+    "DD_LOGS_INJECTION", # this is not an env var needed on the sidecar anyways
   ]
 
 
@@ -348,6 +348,7 @@ resource "google_cloud_run_v2_service" "this" {
             value = local.datadog_service
           }
         }
+
         # if user provides a container-level DD_LOGS_INJECTION env var, we use the more specific value (and should not set DD_LOGS_INJECTION here), 
         # if logging is not enabled, DD_LOGS_INJECTION should not be set
         dynamic "env" {
