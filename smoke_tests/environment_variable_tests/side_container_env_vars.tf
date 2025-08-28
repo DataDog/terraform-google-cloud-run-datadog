@@ -1,3 +1,6 @@
+# Unless explicitly stated otherwise all files in this repository are licensed under the Apache-2.0 License.
+# This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2025 Datadog, Inc.
+
 # # # TESTING FOR: sidecar environment variables, priority between user input and module-computed values
 # # - all module-controlled env vars should be ignored if user provides them in var.datadog_sidecar.env_vars
 # # - i.e. DD_API_KEY, DD_SITE, DD_SERVICE, DD_HEALTH_PORT, DD_VERSION, DD_ENV, DD_TAGS, DD_LOG_LEVEL, DD_SERVERLESS_LOG_PATH

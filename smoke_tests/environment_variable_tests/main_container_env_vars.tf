@@ -1,3 +1,6 @@
+# Unless explicitly stated otherwise all files in this repository are licensed under the Apache-2.0 License.
+# This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2025 Datadog, Inc.
+
 # # # TESTING FOR: DD_SERVICE, DD_LOGS_INJECTION, DD_SERVERLESS_LOG_PATH env vars on container (var.templates.containers.env) and module level
 # # - when DD_SERVICE provided in template.containers.env, it should override the module-computed value
 # # - when DD_SERVICE not provided in template.containers.env, it should use the module-computed value
