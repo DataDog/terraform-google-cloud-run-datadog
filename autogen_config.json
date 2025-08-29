@@ -7,17 +7,23 @@
             "project",
             "ingress",
             "launch_stage",
-            "name",
-            "port",
-            "limits",
-            "service_account",
-            "timeout",
-            "max_instance_request_concurrency",
-            "egress",
-            "network",
-            "subnetwork",
-            "percent"
+            "template.containers.liveness_probe.grpc.port",
+            "template.containers.liveness_probe.http_get.port",
+            "template.containers.startup_probe.grpc.port",
+            "template.containers.startup_probe.http_get.port",
+            "template.containers.startup_probe.tcp_socket.port",
+            "template.containers.ports.name",
+            "template.containers.resources.limits",
+            "template.service_account",
+            "template.max_instance_request_concurrency",
+            "template.timeout",
+            "template.vpc_access.egress",
+            "template.vpc_access.network_interfaces.network",
+            "template.vpc_access.network_interfaces.subnetwork",
+            "traffic.percent"
         ],
-        "never_allow": []
+        "never_allow": [
+          "scaling.max_instance_count"
+        ]
     }
 }
