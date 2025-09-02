@@ -281,6 +281,10 @@ output "build_config" {
   value = google_cloud_run_v2_service.this.build_config
 }
 
+output "multi_region_settings" {
+  value = google_cloud_run_v2_service.this.multi_region_settings
+}
+
 output "scaling" {
   value = google_cloud_run_v2_service.this.scaling
 }

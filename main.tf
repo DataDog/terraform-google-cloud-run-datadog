@@ -1,4 +1,3 @@
-
 locals {
   datadog_service = var.datadog_service != null ? var.datadog_service : var.name
   datadog_logging_vol = { #the shared volume for logging which each container can write their Datadog logs to
@@ -23,7 +22,7 @@ locals {
 
   ### Variables to handle input checks and infrastructure overrides (volume, volume_mount, sidecar container)
   # User-check 1: use this to override user's var.template.volumes and remove the shared volume if shared_volume already exists and logging is enabled, else keep user's volumes
-  volumes_without_shared_volume = var.datadog_enable_logging == true ? [
+  volumes_without_shared_volume = var.datadog_enable_logging ? [
     for v in coalesce(var.template.volumes, []) : v
     if v.name != var.datadog_shared_volume.name
   ] : coalesce(var.template.volumes, [])
@@ -47,7 +46,7 @@ locals {
   ])
 
   # filter out volume mounts with same name or path as the shared volume only if logging is enabled
-  filtered_volume_mounts = var.datadog_enable_logging == true ? [
+  filtered_volume_mounts = var.datadog_enable_logging ? [
     for vm in coalesce(local.all_volume_mounts, []) :
     vm if !(vm.name == var.datadog_shared_volume.name || vm.mount_path == var.datadog_shared_volume.mount_path)
   ] : local.all_volume_mounts
@@ -68,7 +67,7 @@ locals {
     var.datadog_env != null ? { DD_ENV = var.datadog_env } : {},
     var.datadog_tags != null ? { DD_TAGS = join(",", var.datadog_tags) } : {},
     var.datadog_log_level != null ? { DD_LOG_LEVEL = var.datadog_log_level } : {},
-    var.datadog_enable_logging == true ? { DD_SERVERLESS_LOG_PATH = var.datadog_logging_path } : {},
+    var.datadog_enable_logging ? { DD_SERVERLESS_LOG_PATH = var.datadog_logging_path } : {},
   )
   agent_env_vars = [ # user-provided env vars for agent-configuration, filter out the ones that are module-controlled
     for env in coalesce(var.datadog_sidecar.env, []) : env
@@ -80,29 +79,31 @@ locals {
   )
   sidecar_container = merge(
     var.datadog_sidecar,
-    { env = local.all_sidecar_env_vars },
-    { volume_mounts = var.datadog_enable_logging ? [var.datadog_shared_volume] : [] },
-    { startup_probe = merge(var.datadog_sidecar.startup_probe, { tcp_socket = { port = var.datadog_sidecar.health_port } }) }
+    {
+      env           = local.all_sidecar_env_vars
+      volume_mounts = var.datadog_enable_logging ? [var.datadog_shared_volume] : []
+      startup_probe = merge(var.datadog_sidecar.startup_probe, { tcp_socket = { port = var.datadog_sidecar.health_port } })
+    },
   )
 }
 
 check "logging_volume_already_exists" {
   assert {
-    condition     = local.shared_volume_already_exists == false
+    condition     = !local.shared_volume_already_exists
     error_message = "Datadog log collection is enabled and a volume with the name \"${var.datadog_shared_volume.name}\" already exists in the var.template.volumes list. This module will override the existing volume with the settings provided in var.datadog_shared_volume and use it for Datadog log collection. To disable log collection, set var.datadog_enable_logging to false."
   }
 }
 
 check "sidecar_already_exists" {
   assert {
-    condition     = local.already_has_sidecar == false
+    condition     = !local.already_has_sidecar
     error_message = "A sidecar container with the name \"${var.datadog_sidecar.name}\" already exists in the var.template.containers list. This module will override the existing container(s) with the settings provided in var.datadog_sidecar."
   }
 }
 
 check "volume_mounts_share_names_and_or_paths" {
   assert {
-    condition     = local.overlapping_volume_mounts == false
+    condition     = !local.overlapping_volume_mounts
     error_message = "Logging is enabled, and user-inputted volume mounts overlap with values for var.datadog_shared_volume. This module will remove the following containers' volume_mounts sharing a name or path with the Datadog shared volume: ${join(",", [for vm in local.all_volume_mounts : format("\n%s:%s", vm.name, vm.mount_path) if !contains(local.filtered_volume_mounts, vm)])}.\nThis module will add the Datadog volume_mount instead to all containers."
   }
 }

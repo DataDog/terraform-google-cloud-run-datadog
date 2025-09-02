@@ -151,6 +151,13 @@ variable "build_config" {
   default = null
 }
 
+variable "multi_region_settings" {
+  type = object({
+    regions = optional(list(string))
+  })
+  default = null
+}
+
 variable "scaling" {
   type = object({
     manual_instance_count = optional(number),
