@@ -61,11 +61,15 @@ locals {
     DD_SERVICE     = local.datadog_service
     DD_HEALTH_PORT = tostring(var.datadog_sidecar.health_port)
   }
-  all_module_sidecar_env_vars = merge(
-    local.required_module_sidecar_env_vars,
+  shared_env_vars = merge(
+    { DD_SERVICE = local.datadog_service },
     var.datadog_version != null ? { DD_VERSION = var.datadog_version } : {},
     var.datadog_env != null ? { DD_ENV = var.datadog_env } : {},
     var.datadog_tags != null ? { DD_TAGS = join(",", var.datadog_tags) } : {},
+  )
+  all_module_sidecar_env_vars = merge(
+    local.shared_env_vars,
+    local.required_module_sidecar_env_vars,
     var.datadog_log_level != null ? { DD_LOG_LEVEL = var.datadog_log_level } : {},
     var.datadog_enable_logging ? { DD_SERVERLESS_LOG_PATH = var.datadog_logging_path } : {},
   )
@@ -120,7 +124,8 @@ locals {
       merge(container, {
         env = [for name, value in merge(
           # variables which can be overrided by user provided configuration
-          { DD_SERVICE = local.datadog_service, DD_LOGS_INJECTION = "true" },
+          local.shared_env_vars,
+          { DD_LOGS_INJECTION = "true" },
           # user provided env vars converted to map for coalescing purposes
           { for env in coalesce(container.env, []) : env.name => env.value },
           # always override user configuration with these env vars
