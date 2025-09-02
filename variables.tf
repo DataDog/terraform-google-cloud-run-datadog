@@ -119,5 +119,13 @@ variable "datadog_sidecar" {
     })), null)
 
   })
-  description = "Datadog sidecar configuration. Nested attributes include:\n- image - Image for version of Datadog agent to use.\n- name - Name of the sidecar container.\n- resources - Resources like for any cloud run container.\n- startup_probe - Startup probe settings only for failure_threshold, initial_delay_seconds, period_seconds, timeout_seconds.\n- health_port - Health port to start the startup probe.\n- env_vars - List of environment variables with name and value fieldsfor customizing Datadog agent configuration, if any."
+  description = <<DESCRIPTION
+Datadog sidecar configuration. Nested attributes include:
+- image - Image for version of Datadog agent to use.
+- name - Name of the sidecar container.
+- resources - Resources like for any cloud run container.
+- startup_probe - Startup probe settings only for failure_threshold, initial_delay_seconds, period_seconds, timeout_seconds.
+- health_port - Health port to start the startup probe.
+- env_vars - List of environment variables with name and value fieldsfor customizing Datadog agent configuration, if any.
+DESCRIPTION
 }
