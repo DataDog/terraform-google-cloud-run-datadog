@@ -12,7 +12,7 @@ resource "google_cloud_run_v2_service" "this" {
   description          = var.description
   ingress              = var.ingress
   invoker_iam_disabled = var.invoker_iam_disabled
-  labels               = var.labels
+  labels               = local.labels
   launch_stage         = var.launch_stage
   location             = var.location
   name                 = var.name
@@ -58,7 +58,7 @@ resource "google_cloud_run_v2_service" "this" {
     session_affinity                 = var.template.session_affinity
     timeout                          = var.template.timeout
     dynamic "containers" {
-      for_each = var.template.containers != null ? var.template.containers : []
+      for_each = local.template_containers != null ? local.template_containers : []
       content {
         args           = containers.value.args
         base_image_uri = containers.value.base_image_uri
@@ -196,7 +196,7 @@ resource "google_cloud_run_v2_service" "this" {
       }
     }
     dynamic "volumes" {
-      for_each = var.template.volumes != null ? var.template.volumes : []
+      for_each = local.template_volumes != null ? local.template_volumes : []
       content {
         name = volumes.value.name
         dynamic "cloud_sql_instance" {

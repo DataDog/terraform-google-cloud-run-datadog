@@ -2,7 +2,7 @@
 # This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2025 Datadog, Inc.
 
 # # # TESTING FOR: sidecar environment variables, priority between user input and module-computed values
-# # - all module-controlled env vars should be ignored if user provides them in var.datadog_sidecar.env_vars
+# # - all module-controlled env vars should be ignored if user provides them in var.datadog_sidecar.env
 # # - i.e. DD_API_KEY, DD_SITE, DD_SERVICE, DD_HEALTH_PORT, DD_VERSION, DD_ENV, DD_TAGS, DD_LOG_LEVEL, DD_SERVERLESS_LOG_PATH
 # # - user-provided env vars for values not in the module-controlled list should be reflected in outputs and UI
 

@@ -113,7 +113,7 @@ variable "datadog_sidecar" {
       }
     )
     health_port = optional(number, 5555) # DD_HEALTH_PORT
-    env_vars = optional(list(object({    # user-customizable env vars for Datadog agent configuration
+    env = optional(list(object({         # user-customizable env vars for Datadog agent configuration
       name  = string
       value = string
     })), null)

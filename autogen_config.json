@@ -1,29 +1,33 @@
 {
-    "provider": "hashicorp/google",
-    "resource": "google_cloud_run_v2_service",
-    "fields": {
-        "impl": [],
-        "always_allow": [
-            "project",
-            "ingress",
-            "launch_stage",
-            "template.containers.liveness_probe.grpc.port",
-            "template.containers.liveness_probe.http_get.port",
-            "template.containers.startup_probe.grpc.port",
-            "template.containers.startup_probe.http_get.port",
-            "template.containers.startup_probe.tcp_socket.port",
-            "template.containers.ports.name",
-            "template.containers.resources.limits",
-            "template.service_account",
-            "template.max_instance_request_concurrency",
-            "template.timeout",
-            "template.vpc_access.egress",
-            "template.vpc_access.network_interfaces.network",
-            "template.vpc_access.network_interfaces.subnetwork",
-            "traffic.percent"
-        ],
-        "never_allow": [
-          "scaling.max_instance_count"
-        ]
-    }
+  "provider": "hashicorp/google",
+  "resource": "google_cloud_run_v2_service",
+  "fields": {
+    "impl": [
+      "labels",
+      "template.containers",
+      "template.volumes"
+    ],
+    "always_allow": [
+      "project",
+      "ingress",
+      "launch_stage",
+      "template.containers.liveness_probe.grpc.port",
+      "template.containers.liveness_probe.http_get.port",
+      "template.containers.startup_probe.grpc.port",
+      "template.containers.startup_probe.http_get.port",
+      "template.containers.startup_probe.tcp_socket.port",
+      "template.containers.ports.name",
+      "template.containers.resources.limits",
+      "template.service_account",
+      "template.max_instance_request_concurrency",
+      "template.timeout",
+      "template.vpc_access.egress",
+      "template.vpc_access.network_interfaces.network",
+      "template.vpc_access.network_interfaces.subnetwork",
+      "traffic.percent"
+    ],
+    "never_allow": [
+      "scaling.max_instance_count"
+    ]
+  }
 }
