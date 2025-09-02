@@ -12,7 +12,7 @@ resource "google_cloud_run_v2_service" "this" {
   description          = try(var.description, null)
   ingress              = try(var.ingress, null)
   invoker_iam_disabled = try(var.invoker_iam_disabled, null)
-  labels               = try(local.labels, null)
+  labels               = local.labels
   launch_stage         = try(var.launch_stage, null)
   location             = var.location
   name                 = var.name
