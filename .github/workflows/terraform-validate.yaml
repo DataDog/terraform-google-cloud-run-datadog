@@ -1,0 +1,31 @@
+name: Terraform Format Check
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    paths:
+      - 'modules/**'
+      - 'examples/**'
+
+jobs:
+  terraform-validate:
+    name: Validate Terraform
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2 v3
+        with:
+          terraform_version: 1.5.7
+
+      - name: Run terraform validate check
+        run: |
+          terraform init
+          terraform validate
+          find examples -type d -maxdepth 1 -mindepth 1 -exec echo Validating {} \; -exec terraform -chdir="{}" init \; -exec terraform -chdir="{}" validate \;
+          find smoke_tests -type d -maxdepth 1 -mindepth 1 -exec echo Validating {} \; -exec terraform -chdir="{}" init \; -exec terraform -chdir="{}" validate \;

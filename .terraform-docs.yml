@@ -1,0 +1,21 @@
+formatter: markdown table
+output:
+  file: README.md
+  mode: inject
+settings:
+  anchor: true
+  color: true
+  default: true
+  description: false
+  escape: true
+  hide-empty: false
+  indent: 2
+  required: true
+  sensitive: true
+  type: true
+sections:
+  hide:
+    # Don't include the version of provider in the docs.
+    # Having the minimum version of the provider in the requirements
+    # is sufficient. This causes issues with generating docs in CI.
+    - providers
