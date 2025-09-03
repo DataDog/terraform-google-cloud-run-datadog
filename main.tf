@@ -27,17 +27,11 @@ locals {
     if v.name != var.datadog_shared_volume.name
   ] : coalesce(var.template.volumes, [])
 
-  # flag if logging is enabled and shared_volume is already in the template volumes (name of volume exists)
-  shared_volume_already_exists = length(coalesce(var.template.volumes, [])) != length(local.volumes_without_shared_volume)
-
   # User-check 2: check if sidecar container already exists and remove it from the var.template.containers list if it does (to be overridden by module's instantiation)
   containers_without_sidecar = [
     for c in coalesce(var.template.containers, []) : c
     if c.name != var.datadog_sidecar.name
   ]
-
-  # flag if sidecar container already exists
-  already_has_sidecar = length(coalesce(var.template.containers, [])) != length(local.containers_without_sidecar)
 
   # User-check 3: check for each provided container (ignoring sidecar if provided) the volume mounts and if logging is enabled, exclude all volume mounts with same name OR path as the shared volume
   all_volume_mounts = flatten([
@@ -50,8 +44,6 @@ locals {
     for vm in coalesce(local.all_volume_mounts, []) :
     vm if !(vm.name == var.datadog_shared_volume.name || vm.mount_path == var.datadog_shared_volume.mount_path)
   ] : local.all_volume_mounts
-
-  overlapping_volume_mounts = length(local.filtered_volume_mounts) != length(local.all_volume_mounts)
 
   # User-check 4: merge env vars for sidecar-instrumentation with user-provided env vars for agent-configuration
   # (ignore any module-controlled env vars that user provides in var.datadog_sidecar.env)
@@ -93,21 +85,21 @@ locals {
 
 check "logging_volume_already_exists" {
   assert {
-    condition     = !local.shared_volume_already_exists
+    condition     = length(coalesce(var.template.volumes, [])) == length(local.volumes_without_shared_volume)
     error_message = "Datadog log collection is enabled and a volume with the name \"${var.datadog_shared_volume.name}\" already exists in the var.template.volumes list. This module will override the existing volume with the settings provided in var.datadog_shared_volume and use it for Datadog log collection. To disable log collection, set var.datadog_enable_logging to false."
   }
 }
 
 check "sidecar_already_exists" {
   assert {
-    condition     = !local.already_has_sidecar
+    condition     = length(coalesce(var.template.containers, [])) == length(local.containers_without_sidecar)
     error_message = "A sidecar container with the name \"${var.datadog_sidecar.name}\" already exists in the var.template.containers list. This module will override the existing container(s) with the settings provided in var.datadog_sidecar."
   }
 }
 
 check "volume_mounts_share_names_and_or_paths" {
   assert {
-    condition     = !local.overlapping_volume_mounts
+    condition     = length(local.filtered_volume_mounts) == length(local.all_volume_mounts)
     error_message = "Logging is enabled, and user-inputted volume mounts overlap with values for var.datadog_shared_volume. This module will remove the following containers' volume_mounts sharing a name or path with the Datadog shared volume: ${join(",", [for vm in local.all_volume_mounts : format("\n%s:%s", vm.name, vm.mount_path) if !contains(local.filtered_volume_mounts, vm)])}.\nThis module will add the Datadog volume_mount instead to all containers."
   }
 }
