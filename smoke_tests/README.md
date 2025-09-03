@@ -65,7 +65,7 @@ We test the behavior of the following variables:
 
 ### Sidecar Container
 
-This includes testing both module-managed instrumentation variables and user-supplied customizations to the agent configuration via `var.datadog_sidecar.env_vars`.
+This includes testing both module-managed instrumentation variables and user-supplied customizations to the agent configuration via `var.datadog_sidecar.env`.
 
 #### Sidecar variables managed by the module
 
@@ -82,8 +82,8 @@ These variables present in configuring the sidecar must **always use the module-
 
 #### Instrumentation and merging behavior
 
-- If no `var.datadog_sidecar.env_vars` are provided, all module-level variables are injected as given.
-- If `var.datadog_sidecar.env_vars` is provided, all user-defined variables NOT managed by var.datadog_* parameters are surfaced in the Cloud Run UI.
+- If no environment variables are provided through `var.datadog_sidecar.env`, all module-level variables are injected as given.
+- If environment variables are provided through `var.datadog_sidecar.env`, all user-defined variables NOT managed by var.datadog_* parameters are surfaced in the Cloud Run UI.
 - If a user attempts to redefine a module-managed variable (listed above), the module value should take be used instead.
 
 
@@ -98,7 +98,7 @@ We must also verify the module creates and configures the infrastructure compone
 ### Sidecar Container
 
 - Always uses the module-created container definition.
-- Includes user-specified environment variables from `var.datadog_sidecar.env_vars`.
+- Includes user-specified environment variables from `var.datadog_sidecar.env`.
 - If a container in `var.template.containers` matches `var.datadog_sidecar.name`, it is ignored — the module's sidecar takes precedence.
 
 ### Volume Mounts

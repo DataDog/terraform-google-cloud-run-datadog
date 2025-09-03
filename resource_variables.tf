@@ -49,7 +49,7 @@ variable "deletion_protection" {
   default     = null
   description = <<DESCRIPTION
 Whether Terraform will be prevented from destroying the service. Defaults to true.
-When a 'terraform destroy' or 'terraform apply' would delete the service,
+When a'terraform destroy' or 'terraform apply' would delete the service,
 the command will fail if this field is not set to false in Terraform state.
 When the field is set to true or unset in Terraform state, a 'terraform apply'
 or 'terraform destroy' that would delete the service will fail.
@@ -151,9 +151,17 @@ variable "build_config" {
   default = null
 }
 
+variable "multi_region_settings" {
+  type = object({
+    regions = optional(list(string))
+  })
+  default = null
+}
+
 variable "scaling" {
   type = object({
     manual_instance_count = optional(number),
+    max_instance_count    = optional(number),
     min_instance_count    = optional(number),
     scaling_mode          = optional(string)
   })
@@ -292,7 +300,6 @@ variable "template" {
     }))
   })
   nullable = false
-  description = "Consult https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/cloud_run_v2_service#nested_template for more details on the nested attributes."
 }
 
 variable "timeouts" {

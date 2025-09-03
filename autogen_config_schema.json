@@ -1,0 +1,104 @@
+{
+  "$defs": {
+    "FieldsConfig": {
+      "properties": {
+        "impl": {
+          "description": "Field paths to implement in locals, eg 'properties.something.foo",
+          "items": {
+            "type": "string"
+          },
+          "title": "Impl",
+          "type": "array"
+        },
+        "always_allow": {
+          "description": "Field paths that are always included in user input variables and implemented, even if computed",
+          "items": {
+            "type": "string"
+          },
+          "title": "Always Allow",
+          "type": "array"
+        },
+        "never_allow": {
+          "description": "Field paths that are never included in user input variables or implemented, often due to support/deprecation issues",
+          "items": {
+            "type": "string"
+          },
+          "title": "Never Allow",
+          "type": "array"
+        },
+        "always_sensitive": {
+          "description": "Top level fields that should always be marked sensitive in the outputs",
+          "items": {
+            "type": "string"
+          },
+          "title": "Always Sensitive",
+          "type": "array"
+        }
+      },
+      "title": "FieldsConfig",
+      "type": "object"
+    },
+    "TfProvider": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "title": "TfProvider",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "provider": {
+      "description": "Terraform provider name to pull the resource from",
+      "examples": [
+        "hashicorp/azurerm",
+        "hashicorp/google"
+      ],
+      "title": "Provider",
+      "type": "string"
+    },
+    "resource": {
+      "description": "Terraform resource from the specified provider to generate a wrapper module",
+      "examples": [
+        "azurerm_windows_web_app",
+        "google_cloud_run_v2_service"
+      ],
+      "title": "Resource",
+      "type": "string"
+    },
+    "fields": {
+      "$ref": "#/$defs/FieldsConfig",
+      "description": "Configuration for logic related to fields"
+    },
+    "additional_providers": {
+      "description": "Additional providers to include in the generated version file",
+      "items": {
+        "$ref": "#/$defs/TfProvider"
+      },
+      "title": "Additional Providers",
+      "type": "array"
+    },
+    "scrape_docs": {
+      "default": false,
+      "description": "(Experimental) Scrape documentation for the resource field descriptions.",
+      "title": "Scrape Docs",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "provider",
+    "resource"
+  ],
+  "title": "Config",
+  "type": "object"
+}

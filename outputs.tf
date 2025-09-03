@@ -281,6 +281,10 @@ output "build_config" {
   value = google_cloud_run_v2_service.this.build_config
 }
 
+output "multi_region_settings" {
+  value = google_cloud_run_v2_service.this.multi_region_settings
+}
+
 output "scaling" {
   value = google_cloud_run_v2_service.this.scaling
 }
@@ -295,19 +299,4 @@ output "timeouts" {
 
 output "traffic" {
   value = google_cloud_run_v2_service.this.traffic
-}
-
-output "ignored_volume_mounts" {
-  description = "List of volume mounts that overlap with the Datadog shared volume and are ignored by the module."
-  value = [for vm in local.all_volume_mounts : vm if !contains(local.filtered_volume_mounts, vm)]
-}
-
-output "ignored_containers" {
-  description = "List of containers that are ignored by the module."
-  value = [for c in coalesce(var.template.containers, []) : c if !contains(local.containers_without_sidecar, c)]
-}
-
-output "ignored_volumes" {
-  description = "List of volumes that are ignored by the module."
-  value = [for v in coalesce(var.template.volumes, []) : v if !contains(local.volumes_without_shared_volume, v)]
 }
