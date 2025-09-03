@@ -26,8 +26,6 @@
       "template.vpc_access.network_interfaces.subnetwork",
       "traffic.percent"
     ],
-    "never_allow": [
-      "scaling.max_instance_count"
-    ]
+    "never_allow": []
   }
 }
