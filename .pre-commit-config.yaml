@@ -17,4 +17,5 @@ repos:
         name: regenerate terraform docs
         entry: terraform-docs . --config .terraform-docs.yml
         language: system
+        pass_filenames: false
         types: [terraform]

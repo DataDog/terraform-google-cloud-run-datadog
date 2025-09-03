@@ -132,4 +132,3 @@ Lastly, verify the module's IAC configuration exhibits expected behavior on the 
 
 - If `var.datadog_enable_logging = true`, logs show up
 - If logging is disabled, no logs should appear in dashboard
-
