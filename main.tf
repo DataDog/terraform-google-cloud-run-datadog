@@ -132,7 +132,10 @@ locals {
           { DD_SERVERLESS_LOG_PATH = var.datadog_logging_path }
         ) : { name = name, value = value }]
         # User-check 3: check for each provided container the volume mounts and if logging is enabled and the shared volume is an input, do not mount it again
-        volume_mounts = [for vm in coalesce(container.volume_mounts, []) : vm if contains(local.filtered_volume_mounts, vm)]
+        volume_mounts = concat(
+          var.datadog_enable_logging ? [var.datadog_shared_volume] : [],
+          [for vm in coalesce(container.volume_mounts, []) : vm if contains(local.filtered_volume_mounts, vm)],
+        )
     })]
   )
 
