@@ -1,0 +1,21 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: end-of-file-fixer
+        exclude: ^(LICENSE-3rdparty\.csv|NOTICE)
+      - id: trailing-whitespace
+        exclude: ^(LICENSE-3rdparty\.csv|NOTICE)
+  - repo: local
+    hooks:
+      - id: terraform-format
+        name: format terraform
+        entry: terraform fmt -recursive .
+        language: system
+        types: [terraform]
+      - id: terraform-docs
+        name: regenerate terraform docs
+        entry: terraform-docs . --config .terraform-docs.yml
+        language: system
+        pass_filenames: false
+        types: [terraform]

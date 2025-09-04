@@ -6,7 +6,7 @@ This example demonstrates a step-by-step on how to use the `terraform-google-clo
 Create a [Datadog API Key](https://app.datadoghq.com/organization-settings/api-keys)
 ### 1. Set up Terraform variables
 
-Create a `terraform.tfvars` file in this directory to configure all variables defined in `variables.tf`.  
+Create a `terraform.tfvars` file in this directory to configure all variables defined in `variables.tf`.
 You will define your Docker image path after building it in the next step.
 
 ### 2. Build and push the Docker image
