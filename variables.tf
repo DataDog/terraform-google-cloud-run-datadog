@@ -117,8 +117,19 @@ variable "datadog_sidecar" {
       name  = string
       value = string
     })), null)
-
   })
+  default = {
+    image     = "gcr.io/datadoghq/serverless-init:latest"
+    name      = "datadog-sidecar"
+    resources = { limits = { cpu = "1", memory = "512Mi" } }
+    startup_probe = {
+      failure_threshold     = 3
+      period_seconds        = 10
+      initial_delay_seconds = 0
+      timeout_seconds       = 1
+    }
+    health_port = 5555
+  }
   description = <<DESCRIPTION
 Datadog sidecar configuration. Nested attributes include:
 - image - Image for version of Datadog agent to use.
