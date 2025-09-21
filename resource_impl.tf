@@ -75,7 +75,7 @@ resource "google_cloud_run_v2_service" "this" {
         name           = try(containers.value.name, null)
         working_dir    = try(containers.value.working_dir, null)
         dynamic "env" {
-          for_each = try(containers.value.env, null) != null ? containers.value.env : []
+          for_each = try(containers.value.env, [])
           content {
             name  = env.value.name
             value = try(env.value.value, null)
