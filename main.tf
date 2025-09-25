@@ -114,15 +114,21 @@ locals {
   template_containers = concat([local.sidecar_container],
     [for container in local.containers_without_sidecar :
       merge(container, {
-        env = [for name, value in merge(
-          # variables which can be overrided by user provided configuration
-          local.shared_env_vars,
-          { DD_LOGS_INJECTION = "true" },
-          # user provided env vars converted to map for coalescing purposes
-          { for env in coalesce(container.env, []) : env.name => env.value },
-          # always override user configuration with these env vars
-          { DD_SERVERLESS_LOG_PATH = var.datadog_logging_path }
-        ) : { name = name, value = value }]
+        env = concat(
+          # First, preserve user-defined env vars with value_source
+          [for env in coalesce(container.env, []) : { name = env.name, value = env.value, value_source = env.value_source }
+          if env.value_source != null && !contains(local.module_controlled_env_vars, env.name)],
+          # Then add module-managed env vars
+          [for name, value in merge(
+            # variables which can be overrided by user provided configuration
+            local.shared_env_vars,
+            { DD_LOGS_INJECTION = "true" },
+            # user provided env vars (without value_source) converted to map
+            { for env in coalesce(container.env, []) : env.name => env.value if env.value_source == null },
+            # always override user configuration with these env vars
+            { DD_SERVERLESS_LOG_PATH = var.datadog_logging_path }
+          ) : { name = name, value = value, value_source = {} }]
+        )
         # User-check 3: check for each provided container the volume mounts and if logging is enabled and the shared volume is an input, do not mount it again
         volume_mounts = concat(
           var.datadog_enable_logging ? [var.datadog_shared_volume] : [],
