@@ -164,6 +164,42 @@ module "container-level-override" {
 }
 
 
+module "value-source-preserved" {
+  source = "../.."
+
+  name     = "test-secret-manager"
+  project  = "test-project"
+  location = "us-central1"
+
+  datadog_api_key = "test-api-key"
+
+  template = {
+    containers = [
+      {
+        name  = "main"
+        image = "us-docker.pkg.dev/cloudrun/container/hello"
+
+        env = [
+          {
+            name  = "PLAIN_ENV_VAR"
+            value = "plain-value"
+          },
+          {
+            name = "SECRET_ENV_VAR"
+            value_source = {
+              secret_key_ref = {
+                secret  = "projects/test-project/secrets/my-secret"
+                version = "latest"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
+
+
 resource "google_cloud_run_service_iam_member" "invoker_dd_main_module_level_override" {
   service  = module.module-level-override.name
   location = module.module-level-override.location
