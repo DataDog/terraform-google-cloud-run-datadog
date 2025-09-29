@@ -26,7 +26,7 @@ Use the build and deploy script:
 Use the destroy script to tear down the deployed Terraform resources:
 
 ```bash
-./dstroy.sh <language>
+./destroy.sh <language>
 ```
 
 ### Examples
