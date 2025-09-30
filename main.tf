@@ -93,6 +93,13 @@ check "logging_volume_already_exists" {
   }
 }
 
+check "logging_path_should_be_in_shared_volume" {
+  assert {
+    condition     = startswith(var.datadog_logging_path, var.datadog_shared_volume.mount_path)
+    error_message = "The 'datadog_logging_path' must start with the 'mount_path' defined in 'datadog_shared_volume'."
+  }
+}
+
 check "sidecar_already_exists" {
   assert {
     condition     = length(coalesce(var.template.containers, [])) == length(local.containers_without_sidecar)
