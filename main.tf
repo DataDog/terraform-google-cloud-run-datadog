@@ -1,4 +1,5 @@
 locals {
+  module_version  = "1_0_2"
   datadog_service = var.datadog_service != null ? var.datadog_service : var.name
   datadog_logging_vol = { #the shared volume for logging which each container can write their Datadog logs to
     name = var.datadog_shared_volume.name
@@ -116,7 +117,7 @@ check "function_target_is_provided" {
 # Implementation
 locals {
   # Default service tag value to cloud run resource name if not provided
-  labels = merge({ service = local.datadog_service }, var.labels)
+  labels = merge({ service = local.datadog_service, dd_sls_terraform_module_cloud_run = local.module_version }, var.labels)
 
   # Update the environments on the containers
   template_containers = concat([local.sidecar_container],
