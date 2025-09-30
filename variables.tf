@@ -50,6 +50,11 @@ variable "datadog_tags" {
   type        = list(string)
   description = "Datadog tags"
   default     = null
+  validation {
+    condition = alltrue([for tag in var.datadog_tags :
+    length(split(":", tag)) == 2 && alltrue([for part in split(":", tag) : length(part) > 0])])
+    error_message = "Each tag must be a string with two parts separated by exactly one colon (e.g., 'key:value')."
+  }
 }
 
 variable "datadog_enable_logging" {
