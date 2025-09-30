@@ -1,8 +1,72 @@
-# Example: Deploying an Instrumented Node.js App to Cloud Run with Datadog
+# Google Cloud Run Sidecar Instrumentation
 
-This example demonstrates a step-by-step on how to use the `terraform-google-cloud-run-datadog` wrapper module to fully instrument a sample Node.js application with logs, metrics, and tracing using Datadog. If you're looking for a quick deploy, go to [the main README](../README.md) for the build and deploy bash script.
+Examples for instrumenting Google Cloud Run services with a Datadog sidecar
+container.
 
-## Steps to Deploy
+## Available Languages
+
+- [Python](./python)
+- [Node.js](./node/)
+- [Go](./go/)
+- [Java](./java/)
+- [.NET](./dotnet/)
+- [Ruby](./ruby/)
+- [PHP](./php/)
+
+## Quick Deploy
+
+Use the build and deploy script:
+
+```bash
+./build_and_deploy.sh <language>
+```
+
+### Destroy
+
+Use the destroy script to tear down the deployed Terraform resources:
+
+```bash
+./destroy.sh <language>
+```
+
+### Examples
+
+```shell
+# Deploy Go application and destroy it after
+./build_and_deploy.sh go
+./destroy.sh go
+
+# Deploy Python application and destroy it after
+./build_and_deploy.sh python
+./destroy.sh python
+
+# Deploy Node.js application and destroy it after
+./build_and_deploy.sh node
+./destroy.sh node
+```
+
+### Environment and Terraform Variables Required
+
+Before running the build and deploy script, ensure these environment variables are set:
+
+```bash
+export PROJECT_ID="your-gcp-project-id"
+export GCP_PROJECT_NAME="your-cloud-run-service-name"
+export DD_SERVICE="your-datadog-service-name"
+export REPO_NAME="your-artifact-registry-repo"
+export REGION="us-central1"  # Optional, defaults to us-central1
+```
+
+Terraform requires several parameters to be passed in: you can either wait for script to run and prompt on each variable needed, or ensure in the language's directory, that a `terraform.tfvars` file is created, with these following Terraform variables set:
+```terraform
+project="your-gcp-project-id"
+region="us-central1" # same value as $REGION, whatever region you pushed your docker image too
+name="your-cloud-run-service-name"
+image="your-container-image-link" # follow the format in the `build_and_deploy.sh` script ("${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${GCP_PROJECT_NAME}:latest")
+datadog_api_key="your-datadog-api-key"
+```
+
+## Manual Deploy
 Create a [Datadog API Key](https://app.datadoghq.com/organization-settings/api-keys)
 ### 1. Set up Terraform variables
 
@@ -11,10 +75,9 @@ You will define your Docker image path after building it in the next step.
 
 ### 2. Build and push the Docker image
 
-Navigate to the `src/` subdirectory and build + push your application image to your Google Artifact Registry (or Container Registry) using the command line. If you don't have a registry, please go create one.
+Navigate to the `src/` subdirectory and build + push your application image to your Google Artifact Registry (or Container Registry) using the command line.
 
 #### Authenticate to Google Cloud
-
 ```
 gcloud auth login
 ```
@@ -49,7 +112,9 @@ terraform init
 terraform plan
 terrafrom apply
 ```
-Your Node.js app is now fully instrumented with the Datadog sidecar agent. Tracing, logging, and metrics will be visible in Datadog Serverless Monitoring.
+Your app is now fully instrumented with the Datadog sidecar agent. Tracing, logging, and metrics will be visible in Datadog Serverless Monitoring.
+
+
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
@@ -62,19 +127,19 @@ Your Node.js app is now fully instrumented with the Datadog sidecar agent. Traci
 
 | Name | Version |
 |------|---------|
-| <a name="provider_google"></a> [google](#provider\_google) | 6.49.0 |
+| <a name="provider_google"></a> [google](#provider\_google) | 6.49.1 |
 
 ## Modules
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_datadog-cloud-run-v2-node"></a> [datadog-cloud-run-v2-node](#module\_datadog-cloud-run-v2-node) | ../../ | n/a |
+| <a name="module_datadog-cloud-run-v2-RUNTIME"></a> [datadog-cloud-run-v2-RUNTIME](#module\_datadog-cloud-run-v2-RUNTIME) | ../../ | n/a |
 
 ## Resources
 
 | Name | Type |
 |------|------|
-| [google_cloud_run_service_iam_member.invoker-node](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/cloud_run_service_iam_member) | resource |
+| [google_cloud_run_service_iam_member.invoker-RUNTIME](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/cloud_run_service_iam_member) | resource |
 
 ## Inputs
 

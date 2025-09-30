@@ -16,6 +16,7 @@ locals {
     "DD_TAGS",
     "DD_LOG_LEVEL",
     "DD_SERVERLESS_LOG_PATH",
+    "FUNCTION_TARGET",
     "DD_LOGS_INJECTION", # this is not an env var needed on the sidecar anyways
   ]
 
@@ -64,6 +65,7 @@ locals {
     local.required_module_sidecar_env_vars,
     var.datadog_log_level != null ? { DD_LOG_LEVEL = var.datadog_log_level } : {},
     var.datadog_enable_logging ? { DD_SERVERLESS_LOG_PATH = var.datadog_logging_path } : {},
+    try(var.build_config.function_target, null) != null ? { FUNCTION_TARGET = var.build_config.function_target } : {},
   )
   agent_env_vars = [ # user-provided env vars for agent-configuration, filter out the ones that are module-controlled
     for env in coalesce(var.datadog_sidecar.env, []) : env
@@ -104,6 +106,12 @@ check "volume_mounts_share_names_and_or_paths" {
   }
 }
 
+check "function_target_is_provided" {
+  assert {
+    condition     = var.build_config == null || var.build_config.function_target != null
+    error_message = "The var.build_config.function_target attribute is required for instrumenting Cloud Run Functions."
+  }
+}
 
 # Implementation
 locals {

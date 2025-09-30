@@ -6,15 +6,15 @@ provider "google" {
   region  = var.region
 }
 
-module "datadog-cloud-run-v2-node" {
-  source              = "../../"
+module "datadog-cloud-run-v2-python" {
+  source              = "../../../"
   name                = var.name
   location            = var.region
   deletion_protection = false
 
   datadog_api_key        = var.datadog_api_key
   datadog_site           = "datadoghq.com"
-  datadog_service        = "cloud-run-tf-node-example"
+  datadog_service        = "cloud-run-tf-python-example"
   datadog_version        = "1.0.0"
   datadog_tags           = ["test:tag-example", "foo:tag-example-2"]
   datadog_env            = "serverless"
@@ -56,7 +56,7 @@ module "datadog-cloud-run-v2-node" {
 
     containers = [
       {
-        name  = "cloudrun-tf-node-example"
+        name  = "cloudrun-tf-python-example"
         image = var.image
         resources = {
           limits = {
@@ -98,9 +98,9 @@ module "datadog-cloud-run-v2-node" {
 
 
 # IAM Member to allow public access (optional, adjust as needed)
-resource "google_cloud_run_service_iam_member" "invoker-node" {
-  service  = module.datadog-cloud-run-v2-node.name
-  location = module.datadog-cloud-run-v2-node.location
+resource "google_cloud_run_service_iam_member" "invoker-python" {
+  service  = module.datadog-cloud-run-v2-python.name
+  location = module.datadog-cloud-run-v2-python.location
   role     = "roles/run.invoker"
   member   = "allUsers"
 }

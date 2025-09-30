@@ -1,15 +1,15 @@
-# Example: Deploying an Instrumented PHP App to Cloud Run with Datadog
+# Example: Deploying an Instrumented Node.js Cloud Run Function with Datadog
 
-This example demonstrates a step-by-step on how to use the `terraform-google-cloud-run-datadog` wrapper module to fully instrument a sample PHP application with logs, metrics, and tracing using Datadog. If you're looking for a quick deploy, go to [the main README](../README.md) for the build and deploy bash script.
+This example demonstrates a step-by-step on how to use the `terraform-google-cloud-run-datadog` wrapper module to fully instrument a sample Node.js function with logs, metrics, and tracing using Datadog. 
 
 ## Steps to Deploy
 Create a [Datadog API Key](https://app.datadoghq.com/organization-settings/api-keys)
 ### 1. Set up Terraform variables
 
-Create a `terraform.tfvars` file in this directory to configure all variables defined in `variables.tf`.
-You will define your Docker image path after building it in the next step.
+Create a `terraform.tfvars` file in this directory to configure all variables defined in `variables.tf`.  
+You will define your image path after building it in the next step.
 
-### 2. Build and push the Docker image
+### 2. Build a container image out of your function code
 
 Navigate to the `src/` subdirectory and build + push your application image to your Google Artifact Registry (or Container Registry) using the command line. If you don't have a registry, please go create one.
 
@@ -21,18 +21,14 @@ gcloud auth login
 
 Make sure you're logged in and have access to push to your registry.
 
-#### Build the Docker image
+#### Build the container image
+
 ```
-docker buildx build \
-  --platform linux/amd64 \
-  -t $REGION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/$IMAGE_NAME:latest \
-  .
+gcloud builds submit --pack \
+  image=$REGION-docker.pkg.dev/$PROJECT_ID/gcr.io/$IMAGE_NAME:latest,env=GOOGLE_FUNCTION_TARGET=$FUNCTION_TARGET \
+  --project $PROJECT_ID
 ```
 
-#### Push image to the artifact registry
-```
-docker push $REGION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/$IMAGE_NAME:latest
-```
 #### Troubleshooting
 
 If at any point you get authentication errors, rerun `gcloud auth login` and `gcloud auth configure-docker $REGION-docker.pkg.dev`
@@ -49,7 +45,7 @@ terraform init
 terraform plan
 terrafrom apply
 ```
-Your PHP app is now fully instrumented with the Datadog sidecar agent. Tracing, logging, and metrics will be visible in Datadog Serverless Monitoring.
+Your Node.js function is now fully instrumented with the Datadog sidecar agent. Tracing, logging, and metrics will be visible in Datadog Serverless Monitoring.
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
@@ -62,19 +58,19 @@ Your PHP app is now fully instrumented with the Datadog sidecar agent. Tracing, 
 
 | Name | Version |
 |------|---------|
-| <a name="provider_google"></a> [google](#provider\_google) | 6.49.1 |
+| <a name="provider_google"></a> [google](#provider\_google) | 6.49.0 |
 
 ## Modules
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_datadog-cloud-run-v2-php"></a> [datadog-cloud-run-v2-php](#module\_datadog-cloud-run-v2-php) | ../../ | n/a |
+| <a name="module_datadog-cloud-run-v2-node"></a> [datadog-cloud-run-v2-node](#module\_datadog-cloud-run-v2-node) | ../../ | n/a |
 
 ## Resources
 
 | Name | Type |
 |------|------|
-| [google_cloud_run_service_iam_member.invoker-php](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/cloud_run_service_iam_member) | resource |
+| [google_cloud_run_service_iam_member.invoker-node](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/cloud_run_service_iam_member) | resource |
 
 ## Inputs
 
