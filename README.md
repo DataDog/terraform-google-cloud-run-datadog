@@ -132,7 +132,7 @@ resource "google_cloud_run_v2_service" "example_cloud_run_service" {
 ##### Datadog Terraform module for Google Cloud Run
 ```
 module "example_cloud_run_service" {
-  source = "Datadog/cloud-run-datadog/google" <TODO: once published!>
+  source = "DataDog/cloud-run-datadog/google"
   name = "cloud-run-example"
   ...
   template = {
