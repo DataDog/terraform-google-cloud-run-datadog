@@ -6,8 +6,7 @@ permissions:
 on:
   pull_request:
     paths:
-      - 'modules/**'
-      - 'examples/**'
+      - '**'
 
 jobs:
   terraform-validate:
