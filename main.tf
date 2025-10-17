@@ -1,12 +1,6 @@
 locals {
   module_version  = "1_1_1"
   datadog_service = var.datadog_service != null ? var.datadog_service : var.name
-  datadog_logging_vol = { #the shared volume for logging which each container can write their Datadog logs to
-    name = var.datadog_shared_volume.name
-    empty_dir = {
-      medium = "MEMORY"
-    }
-  }
   module_controlled_env_vars = [
     "DD_API_KEY",
     "DD_SITE",
