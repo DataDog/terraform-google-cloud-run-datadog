@@ -123,8 +123,12 @@ check "function_target_is_provided" {
 
 # Implementation
 locals {
-  # Default service tag value to cloud run resource name if not provided
-  labels = merge({ service = local.datadog_service, dd_sls_terraform_module_cloud_run = local.module_version }, var.labels)
+  labels = merge(
+    var.labels,
+    { service = local.datadog_service, dd_sls_terraform_module_cloud_run = local.module_version },
+    var.datadog_env != null ? { env = var.datadog_env } : {},
+    var.datadog_version != null ? { version = var.datadog_version } : {},
+  )
 
   # Update the environments on the containers
   template_containers = concat([local.sidecar_container],
