@@ -1,4 +1,4 @@
-name: Terraform Format Check
+name: Terraform Validate Check
 
 permissions:
   contents: read

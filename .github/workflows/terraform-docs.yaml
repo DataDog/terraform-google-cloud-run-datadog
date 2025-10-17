@@ -1,4 +1,4 @@
-name: Check Terraform Docs
+name: Terraform Docs Check
 
 permissions:
   contents: read
