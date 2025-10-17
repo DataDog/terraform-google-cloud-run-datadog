@@ -1,4 +1,4 @@
-name: Terraform Validate Check
+name: Terraform Lint Check
 
 permissions:
   contents: read
