@@ -1,12 +1,9 @@
+# Unless explicitly stated otherwise all files in this repository are licensed under the Apache-2.0 License.
+# This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2025 Datadog, Inc.
+
 locals {
   module_version  = "1_1_1"
   datadog_service = var.datadog_service != null ? var.datadog_service : var.name
-  datadog_logging_vol = { #the shared volume for logging which each container can write their Datadog logs to
-    name = var.datadog_shared_volume.name
-    empty_dir = {
-      medium = "MEMORY"
-    }
-  }
   module_controlled_env_vars = [
     "DD_API_KEY",
     "DD_SITE",
