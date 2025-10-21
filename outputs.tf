@@ -61,6 +61,13 @@ DESCRIPTION
   value       = google_cloud_run_v2_service.this.custom_audiences
 }
 
+output "default_uri_disabled" {
+  description = <<DESCRIPTION
+Disables public resolution of the default URI of this service.
+DESCRIPTION
+  value       = google_cloud_run_v2_service.this.default_uri_disabled
+}
+
 output "delete_time" {
   description = <<DESCRIPTION
 The deletion time.

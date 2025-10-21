@@ -93,6 +93,12 @@
       "description": "(Experimental) Scrape documentation for the resource field descriptions.",
       "title": "Scrape Docs",
       "type": "boolean"
+    },
+    "all_fields": {
+      "default": false,
+      "description": "Allow all fields, including computed ones, to be included in user input variables and implemented. Useful to determine what fields are available.",
+      "title": "All Fields",
+      "type": "boolean"
     }
   },
   "required": [
