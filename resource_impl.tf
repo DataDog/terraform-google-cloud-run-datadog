@@ -8,6 +8,7 @@ resource "google_cloud_run_v2_service" "this" {
   client               = try(var.client, null)
   client_version       = try(var.client_version, null)
   custom_audiences     = try(var.custom_audiences, null)
+  default_uri_disabled = try(var.default_uri_disabled, null)
   deletion_protection  = try(var.deletion_protection, null)
   description          = try(var.description, null)
   ingress              = try(var.ingress, null)
@@ -58,6 +59,7 @@ resource "google_cloud_run_v2_service" "this" {
     encryption_key                   = try(var.template.encryption_key, null)
     execution_environment            = try(var.template.execution_environment, null)
     gpu_zonal_redundancy_disabled    = try(var.template.gpu_zonal_redundancy_disabled, null)
+    health_check_disabled            = try(var.template.health_check_disabled, null)
     labels                           = try(var.template.labels, null)
     max_instance_request_concurrency = try(var.template.max_instance_request_concurrency, null)
     revision                         = try(var.template.revision, null)
@@ -185,6 +187,7 @@ resource "google_cloud_run_v2_service" "this" {
           content {
             mount_path = volume_mounts.value.mount_path
             name       = volume_mounts.value.name
+            sub_path   = try(volume_mounts.value.sub_path, null)
           }
         }
       }
@@ -222,8 +225,9 @@ resource "google_cloud_run_v2_service" "this" {
         dynamic "gcs" {
           for_each = try(volumes.value.gcs, null) != null ? [true] : []
           content {
-            bucket    = volumes.value.gcs.bucket
-            read_only = try(volumes.value.gcs.read_only, null)
+            bucket        = volumes.value.gcs.bucket
+            mount_options = try(volumes.value.gcs.mount_options, null)
+            read_only     = try(volumes.value.gcs.read_only, null)
           }
         }
         dynamic "nfs" {

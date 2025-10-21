@@ -44,6 +44,14 @@ For more information, see https://cloud.google.com/run/docs/configuring/custom-a
 DESCRIPTION
 }
 
+variable "default_uri_disabled" {
+  type        = bool
+  default     = null
+  description = <<DESCRIPTION
+Disables public resolution of the default URI of this service.
+DESCRIPTION
+}
+
 variable "deletion_protection" {
   type        = bool
   default     = null
@@ -174,6 +182,7 @@ variable "template" {
     encryption_key                   = optional(string),
     execution_environment            = optional(string),
     gpu_zonal_redundancy_disabled    = optional(bool),
+    health_check_disabled            = optional(bool),
     labels                           = optional(map(string)),
     max_instance_request_concurrency = optional(number),
     revision                         = optional(string),
@@ -251,7 +260,8 @@ variable "template" {
       })),
       volume_mounts = optional(list(object({
         mount_path = string,
-        name       = string
+        name       = string,
+        sub_path   = optional(string)
       })))
     }))),
     node_selector = optional(object({
@@ -271,8 +281,9 @@ variable "template" {
         size_limit = optional(string)
       })),
       gcs = optional(object({
-        bucket    = string,
-        read_only = optional(bool)
+        bucket        = string,
+        mount_options = optional(list(string)),
+        read_only     = optional(bool)
       })),
       nfs = optional(object({
         path      = string,
