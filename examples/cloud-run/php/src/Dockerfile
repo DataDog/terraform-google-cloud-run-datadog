@@ -1,20 +1,16 @@
-# Unless explicitly stated otherwise all files in this repository are licensed
-# under the Apache 2.0 License.
-
-# This product includes software developped at
-# Datadog (https://www.datadoghq.com/)
-# Copyright 2025-present Datadog, Inc.
+# Unless explicitly stated otherwise all files in this repository are licensed under the Apache-2.0 License.
+# This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2025 Datadog, Inc.
 
 FROM php:8.4-apache
 
 WORKDIR /var/www/html
 
 # Install system dependencies and Composer
-RUN apt-get update && apt-get install -y \
-    zip \
-    unzip \
+RUN apt-get update && apt-get install --no-install-recommends -y \
+    zip=3.0-* \
+    unzip=6.0-* \
     && rm -rf /var/lib/apt/lists/*
-
+RUN apt-get clean
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 # Create Laravel project

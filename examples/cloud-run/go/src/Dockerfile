@@ -1,16 +1,13 @@
-# Unless explicitly stated otherwise all files in this repository are licensed
-# under the Apache 2.0 License.
-
-# This product includes software developped at
-# Datadog (https://www.datadoghq.com/)
-# Copyright 2025-present Datadog, Inc.
+# Unless explicitly stated otherwise all files in this repository are licensed under the Apache-2.0 License.
+# This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2025 Datadog, Inc.
 
 FROM golang:1.24-bookworm
 
 WORKDIR /app
 
 # ca-certificates is required for bookworm images
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates=20230311+deb12u1 && \
+    rm -rf /var/lib/apt/lists/*
 
 COPY go.mod go.sum ./
 RUN go mod download
