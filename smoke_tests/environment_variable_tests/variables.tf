@@ -16,20 +16,6 @@ variable "region" {
 }
 
 
-//google resource
-variable "name" {
-  type        = string
-  description = "The name of the Cloud Run service"
-  default     = "cloud-run-test"
-  nullable    = false
-}
-
-variable "image" {
-  type        = string
-  description = "The image to deploy the service to"
-  default     = "us-docker.pkg.dev/cloudrun/container/hello"
-  nullable    = false
-}
 
 //datadog values
 

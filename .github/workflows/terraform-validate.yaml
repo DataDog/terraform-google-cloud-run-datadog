@@ -26,5 +26,5 @@ jobs:
         run: |
           terraform init
           terraform validate
-          find examples -type d -maxdepth 1 -mindepth 1 -exec echo Validating {} \; -exec terraform -chdir="{}" init \; -exec terraform -chdir="{}" validate \;
+          find examples -type d -maxdepth 2 -mindepth 2 -exec echo Validating {} \; -exec terraform -chdir="{}" init \; -exec terraform -chdir="{}" validate \;
           find smoke_tests -type d -maxdepth 1 -mindepth 1 -exec echo Validating {} \; -exec terraform -chdir="{}" init \; -exec terraform -chdir="{}" validate \;

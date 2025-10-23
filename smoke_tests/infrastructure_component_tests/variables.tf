@@ -16,13 +16,6 @@ variable "region" {
 }
 
 
-//google resource
-variable "name" {
-  type        = string
-  description = "The name of the Cloud Run service"
-  default     = "cloud-run-test"
-  nullable    = false
-}
 
 variable "image" {
   type        = string
