@@ -32,8 +32,3 @@ jobs:
       - name: Check Docs are up to date
         run: |
           terraform-docs . --output-check --config .terraform-docs.yml
-          exit_code=$?
-          if [ $exit_code -ne 0 ]; then
-            echo 'Terraform docs are not up to date. Please run `pre-commit run --all-files` to fix.'
-          fi
-          exit $exit_code
