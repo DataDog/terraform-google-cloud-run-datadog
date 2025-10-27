@@ -26,4 +26,6 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
 
       - name: Run TFLint
-        run: tflint --recursive --config "$(pwd)/.tflint.hcl"
+        run: |
+          tflint --recursive --config "$(pwd)/.tflint.hcl"
+          echo All files passed the linter!
