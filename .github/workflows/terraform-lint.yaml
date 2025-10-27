@@ -14,15 +14,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-
-      - uses: terraform-linters/setup-tflint@acd1575d3c037258ce5b2dd01379dc49ce24c6b7 # v6.2.0
-        name: Setup TFLint
         with:
-          tflint_version: v0.52.0
-          cache: true
+          fetch-depth: 1
 
-      - name: Init TFLint
-        run: tflint --init
+      - name: Install TFLint
+        run: |
+          curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+          tflint --version
         env:
           # https://github.com/terraform-linters/tflint/blob/master/docs/user-guide/plugins.md#avoiding-rate-limiting
           GITHUB_TOKEN: ${{ github.token }}
