@@ -2,7 +2,7 @@
 # This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2025 Datadog, Inc.
 
 locals {
-  module_version  = "1_1_1"
+  module_version  = "1_1_2"
   datadog_service = var.datadog_service != null ? var.datadog_service : var.name
   module_controlled_env_vars = [
     "DD_API_KEY",
@@ -122,7 +122,7 @@ check "function_target_is_provided" {
 locals {
   labels = merge(
     var.labels,
-    { service = local.datadog_service, dd_sls_terraform_module_cloud_run = local.module_version },
+    { service = local.datadog_service, dd_sls_terraform_module = local.module_version },
     var.datadog_env != null ? { env = var.datadog_env } : {},
     var.datadog_version != null ? { version = var.datadog_version } : {},
   )
