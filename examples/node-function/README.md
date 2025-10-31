@@ -1,12 +1,12 @@
 # Example: Deploying an Instrumented Node.js Cloud Run Function with Datadog
 
-This example demonstrates a step-by-step on how to use the `terraform-google-cloud-run-datadog` wrapper module to fully instrument a sample Node.js function with logs, metrics, and tracing using Datadog. 
+This example demonstrates a step-by-step on how to use the `terraform-google-cloud-run-datadog` wrapper module to fully instrument a sample Node.js function with logs, metrics, and tracing using Datadog.
 
 ## Steps to Deploy
 Create a [Datadog API Key](https://app.datadoghq.com/organization-settings/api-keys)
 ### 1. Set up Terraform variables
 
-Create a `terraform.tfvars` file in this directory to configure all variables defined in `variables.tf`.  
+Create a `terraform.tfvars` file in this directory to configure all variables defined in `variables.tf`.
 You will define your image path after building it in the next step.
 
 ### 2. Build a container image out of your function code
