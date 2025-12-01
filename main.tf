@@ -113,7 +113,7 @@ check "volume_mounts_share_names_and_or_paths" {
 
 check "function_target_is_provided" {
   assert {
-    condition     = var.build_config == null || var.build_config.function_target != null
+    condition     = var.build_config != null ? var.build_config.function_target != null : true
     error_message = "The var.build_config.function_target attribute is required for instrumenting Cloud Run Functions."
   }
 }
