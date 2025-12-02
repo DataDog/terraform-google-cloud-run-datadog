@@ -152,7 +152,11 @@ locals {
   })]
 
   # Update the environments on the containers
-  template_containers = var.datadog_sidecar_position == "prepend" ? concat([local.sidecar_container], local.user_containers) : concat(local.user_containers, [local.sidecar_container])
+  template_containers = flatten([
+    var.datadog_sidecar_position == "prepend" ? [local.sidecar_container] : [],
+    local.user_containers,
+    var.datadog_sidecar_position == "append" ? [local.sidecar_container] : []
+  ])
 
   # If dd_enable_logging is true, add the shared volume to the template volumes
   template_volumes = concat(local.volumes_without_shared_volume, var.datadog_enable_logging ? [{
