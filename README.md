@@ -21,7 +21,7 @@ module "datadog-cloud-run-v2-<language>" {
 
   datadog_api_key = "example-datadog-api-key"
   datadog_service = "cloud-run-tf-<language>-example"
-  datadog_version = "1.0.0"
+  datadog_version = "1_0_0"
   datadog_env = "serverless"
   datadog_enable_logging = true
 

@@ -15,7 +15,7 @@ module "datadog-cloud-run-v2-dotnet" {
   datadog_api_key        = var.datadog_api_key
   datadog_site           = "datadoghq.com"
   datadog_service        = "cloud-run-tf-dotnet-example"
-  datadog_version        = "1.0.0"
+  datadog_version        = "1_0_0"
   datadog_tags           = ["test:tag-example", "foo:tag-example-2"]
   datadog_env            = "serverless"
   datadog_enable_logging = true

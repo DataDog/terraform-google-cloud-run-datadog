@@ -18,7 +18,7 @@ module "module-logs-injection" {
   datadog_service        = "cloudrun-logs-injection"
   datadog_api_key        = var.datadog_api_key
   datadog_site           = "datadoghq.com"
-  datadog_version        = "1.0.0"
+  datadog_version        = "1_0_0"
   datadog_env            = "serverless"
   datadog_enable_logging = true
   datadog_log_level      = "debug"
@@ -74,7 +74,7 @@ module "module-no-logs" {
   datadog_service        = "cloudrun-test-no-logs"
   datadog_api_key        = var.datadog_api_key
   datadog_site           = "datadoghq.com"
-  datadog_version        = "1.0.0"
+  datadog_version        = "1_0_0"
   datadog_env            = "serverless"
   datadog_enable_logging = false
   datadog_log_level      = "debug"

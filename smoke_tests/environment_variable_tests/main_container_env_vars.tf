@@ -25,7 +25,7 @@ module "module-level-override" {
   datadog_service        = "service-value-to-be-used-from-datadog-service-var"
   datadog_api_key        = var.datadog_api_key
   datadog_site           = "datadoghq.com"
-  datadog_version        = "1.0.0"
+  datadog_version        = "1_0_0"
   datadog_env            = "serverless"
   datadog_enable_logging = false
   datadog_log_level      = "debug"
@@ -73,7 +73,7 @@ module "module-name-default" {
   #   datadog_service = #should not be provided, will default to service name of module
   datadog_api_key = var.datadog_api_key
   datadog_site    = "datadoghq.com"
-  datadog_version = "1.0.0"
+  datadog_version = "1_0_0"
   datadog_env     = "serverless"
   # datadog_enable_logging should default to true because module default is true
   datadog_log_level = "debug"
@@ -123,7 +123,7 @@ module "container-level-override" {
   datadog_service        = "service-value-used-in-sidecar-env-vars"
   datadog_api_key        = var.datadog_api_key
   datadog_site           = "datadoghq.com"
-  datadog_version        = "1.0.0"
+  datadog_version        = "1_0_0"
   datadog_env            = "serverless"
   datadog_enable_logging = true
   datadog_log_level      = "debug"
