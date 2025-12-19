@@ -2,7 +2,7 @@
 # This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2025 Datadog, Inc.
 
 locals {
-  module_version  = "1_1_3"
+  module_version  = "1_1_4"
   datadog_service = var.datadog_service != null ? var.datadog_service : var.name
   module_controlled_env_vars = [
     "DD_API_KEY",
