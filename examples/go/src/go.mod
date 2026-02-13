@@ -1,6 +1,6 @@
 module golang-test-app
 
-go 1.24.0
+go 1.25.7
 
 require (
 	github.com/DataDog/dd-trace-go/contrib/net/http/v2 v2.1.0
