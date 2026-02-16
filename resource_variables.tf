@@ -229,6 +229,14 @@ variable "template" {
         container_port = optional(number),
         name           = optional(string)
       })),
+      readiness_probe = optional(object({
+        grpc = optional(object({
+          service = optional(string)
+        })),
+        http_get = optional(object({
+
+        }))
+      })),
       resources = optional(object({
         cpu_idle          = optional(bool),
         limits            = optional(map(string)),
