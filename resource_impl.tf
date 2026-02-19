@@ -135,6 +135,23 @@ resource "google_cloud_run_v2_service" "this" {
             name           = try(containers.value.ports.name, null)
           }
         }
+        dynamic "readiness_probe" {
+          for_each = try(containers.value.readiness_probe, null) != null ? [true] : []
+          content {
+            dynamic "grpc" {
+              for_each = try(containers.value.readiness_probe.grpc, null) != null ? [true] : []
+              content {
+                service = try(containers.value.readiness_probe.grpc.service, null)
+              }
+            }
+            dynamic "http_get" {
+              for_each = try(containers.value.readiness_probe.http_get, null) != null ? [true] : []
+              content {
+
+              }
+            }
+          }
+        }
         dynamic "resources" {
           for_each = try(containers.value.resources, null) != null ? [true] : []
           content {
