@@ -145,3 +145,13 @@ Datadog sidecar configuration. Nested attributes include:
 - env_vars - List of environment variables with name and value fieldsfor customizing Datadog agent configuration, if any.
 DESCRIPTION
 }
+
+variable "datadog_sidecar_position" {
+  type        = string
+  description = "Position of the Datadog sidecar container in the containers list. Use 'prepend' to add it first (default) or 'append' to add it last. Use 'append' when migrating existing services to avoid container index mismatches."
+  default     = "prepend"
+  validation {
+    condition     = contains(["prepend", "append"], var.datadog_sidecar_position)
+    error_message = "The datadog_sidecar_position must be either 'prepend' or 'append'."
+  }
+}
