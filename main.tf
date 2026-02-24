@@ -152,6 +152,9 @@ locals {
           [for vm in coalesce(container.volume_mounts, []) : vm if contains(local.filtered_volume_mounts, vm)],
         )
     })],
+    # We add the sidecar at the end due to an issue where cloud sql mounts are always
+    # assigned to the first container (assuming it is the main app), so we should preserve
+    # that ordering here to ensure that cloud sql mounts aren't added to the sidecar
     [local.sidecar_container],
   )
 
