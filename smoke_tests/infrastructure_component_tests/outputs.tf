@@ -50,3 +50,13 @@ output "logging_disabled_ignored_volume_mounts" {
   description = "List of volume_mounts that are ignored by the module."
   value       = module.logging_disabled.ignored_volume_mounts
 }
+
+output "cloudsql_volume-service_containers" {
+  description = "Containers for the Cloud SQL and shared volume test."
+  value       = module.cloudsql-volume.template[0].containers
+}
+
+output "cloudsql_volume-service_volumes" {
+  description = "Volumes for the Cloud SQL and shared volume test."
+  value       = module.cloudsql-volume.template[0].volumes
+}

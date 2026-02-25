@@ -24,6 +24,13 @@ variable "image" {
   nullable    = false
 }
 
+variable "cloudsql_instance" {
+  type        = string
+  description = "Cloud SQL instance connection name in the format project:region:instance"
+  nullable    = false
+}
+
+
 //datadog values
 
 variable "datadog_api_key" {
