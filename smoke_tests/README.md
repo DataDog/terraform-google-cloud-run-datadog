@@ -119,6 +119,11 @@ We must also verify the module creates and configures the infrastructure compone
 - If logging is disabled (`var.datadog_enable_logging = false`):
   - We do not touch the user-defined volumes.
 
+### Cloud SQL Volume Mounts
+
+- When a Cloud SQL volume is added and mounted on the main app container, the mount must remain on the main app container after `terraform apply` (not moved to the sidecar).
+- Tested alongside the Datadog shared volume.
+- The `cloudsql_instance` variable must be set in `terraform.tfvars` for the infrastructure tests (format: `project:region:instance`).
 
 ## 3. Dashboard observability
 

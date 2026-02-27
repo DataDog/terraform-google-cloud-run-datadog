@@ -128,7 +128,7 @@ locals {
   )
 
   # Update the environments on the containers
-  template_containers = concat([local.sidecar_container],
+  template_containers = concat(
     [for container in local.containers_without_sidecar :
       merge(container, {
         env = concat(
@@ -151,7 +151,11 @@ locals {
           var.datadog_enable_logging ? [var.datadog_shared_volume] : [],
           [for vm in coalesce(container.volume_mounts, []) : vm if contains(local.filtered_volume_mounts, vm)],
         )
-    })]
+    })],
+    # We add the sidecar at the end due to an issue where cloud sql mounts are always
+    # assigned to the first container (assuming it is the main app), so we should preserve
+    # that ordering here to ensure that cloud sql mounts aren't added to the sidecar
+    [local.sidecar_container],
   )
 
   # If dd_enable_logging is true, add the shared volume to the template volumes
