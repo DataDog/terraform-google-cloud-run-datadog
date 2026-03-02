@@ -73,6 +73,14 @@ User-provided description of the Service. This field currently has a 512-charact
 DESCRIPTION
 }
 
+variable "iap_enabled" {
+  type        = bool
+  default     = null
+  description = <<DESCRIPTION
+Used to enable/disable IAP for the cloud-run service.
+DESCRIPTION
+}
+
 variable "ingress" {
   type        = string
   default     = null

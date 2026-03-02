@@ -129,6 +129,13 @@ DESCRIPTION
   value       = google_cloud_run_v2_service.this.generation
 }
 
+output "iap_enabled" {
+  description = <<DESCRIPTION
+Used to enable/disable IAP for the cloud-run service.
+DESCRIPTION
+  value       = google_cloud_run_v2_service.this.iap_enabled
+}
+
 output "id" {
   value = google_cloud_run_v2_service.this.id
 }
