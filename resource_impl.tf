@@ -11,6 +11,7 @@ resource "google_cloud_run_v2_service" "this" {
   default_uri_disabled = try(var.default_uri_disabled, null)
   deletion_protection  = try(var.deletion_protection, null)
   description          = try(var.description, null)
+  iap_enabled          = try(var.iap_enabled, null)
   ingress              = try(var.ingress, null)
   invoker_iam_disabled = try(var.invoker_iam_disabled, null)
   labels               = local.labels

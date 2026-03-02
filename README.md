@@ -158,7 +158,7 @@ module "example_cloud_run_service" {
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.5.0 |
-| <a name="requirement_google"></a> [google](#requirement\_google) | >= 7.19.0 |
+| <a name="requirement_google"></a> [google](#requirement\_google) | >= 7.21.0 |
 
 ## Modules
 
@@ -194,6 +194,7 @@ No modules.
 | <a name="input_default_uri_disabled"></a> [default\_uri\_disabled](#input\_default\_uri\_disabled) | Disables public resolution of the default URI of this service. | `bool` | `null` | no |
 | <a name="input_deletion_protection"></a> [deletion\_protection](#input\_deletion\_protection) | Whether Terraform will be prevented from destroying the service. Defaults to true.<br/>When a'terraform destroy' or 'terraform apply' would delete the service,<br/>the command will fail if this field is not set to false in Terraform state.<br/>When the field is set to true or unset in Terraform state, a 'terraform apply'<br/>or 'terraform destroy' that would delete the service will fail.<br/>When the field is set to false, deleting the service is allowed. | `bool` | `null` | no |
 | <a name="input_description"></a> [description](#input\_description) | User-provided description of the Service. This field currently has a 512-character limit. | `string` | `null` | no |
+| <a name="input_iap_enabled"></a> [iap\_enabled](#input\_iap\_enabled) | Used to enable/disable IAP for the cloud-run service. | `bool` | `null` | no |
 | <a name="input_ingress"></a> [ingress](#input\_ingress) | Provides the ingress settings for this Service. On output, returns the currently observed ingress settings, or INGRESS\_TRAFFIC\_UNSPECIFIED if no revision is active. Possible values: ["INGRESS\_TRAFFIC\_ALL", "INGRESS\_TRAFFIC\_INTERNAL\_ONLY", "INGRESS\_TRAFFIC\_INTERNAL\_LOAD\_BALANCER"] | `string` | `null` | no |
 | <a name="input_invoker_iam_disabled"></a> [invoker\_iam\_disabled](#input\_invoker\_iam\_disabled) | Disables IAM permission check for run.routes.invoke for callers of this service. For more information, visit https://cloud.google.com/run/docs/securing/managing-access#invoker_check. | `bool` | `null` | no |
 | <a name="input_labels"></a> [labels](#input\_labels) | Unstructured key value map that can be used to organize and categorize objects. User-provided labels are shared with Google's billing system, so they can be used to filter, or break down billing charges by team, component,<br/>environment, state, etc. For more information, visit https://docs.cloud.google.com/resource-manager/docs/creating-managing-labels or https://cloud.google.com/run/docs/configuring/labels.<br/><br/>Cloud Run API v2 does not support labels with  'run.googleapis.com', 'cloud.googleapis.com', 'serving.knative.dev', or 'autoscaling.knative.dev' namespaces, and they will be rejected.<br/>All system labels in v1 now have a corresponding field in v2 Service.<br/><br/>**Note**: This field is non-authoritative, and will only manage the labels present in your configuration.<br/>Please refer to the field 'effective\_labels' for all of the labels present on the resource. | `map(string)` | `null` | no |
@@ -229,6 +230,7 @@ No modules.
 | <a name="output_etag"></a> [etag](#output\_etag) | A system-generated fingerprint for this version of the resource. May be used to detect modification conflict during updates. |
 | <a name="output_expire_time"></a> [expire\_time](#output\_expire\_time) | For a deleted resource, the time after which it will be permanently deleted. |
 | <a name="output_generation"></a> [generation](#output\_generation) | A number that monotonically increases every time the user modifies the desired state. Please note that unlike v1, this is an int64 value. As with most Google APIs, its JSON representation will be a string instead of an integer. |
+| <a name="output_iap_enabled"></a> [iap\_enabled](#output\_iap\_enabled) | Used to enable/disable IAP for the cloud-run service. |
 | <a name="output_id"></a> [id](#output\_id) | n/a |
 | <a name="output_ignored_containers"></a> [ignored\_containers](#output\_ignored\_containers) | List of containers that are ignored by the module. |
 | <a name="output_ignored_volume_mounts"></a> [ignored\_volume\_mounts](#output\_ignored\_volume\_mounts) | List of volume mounts that overlap with the Datadog shared volume and are ignored by the module. |
