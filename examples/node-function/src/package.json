@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "dependencies": {
-    "@google-cloud/functions-framework": "^3.5.1",
+    "@google-cloud/functions-framework": "^5.0.2",
     "dd-trace": "^5.85.0",
     "winston": "^3.19.0"
   }
