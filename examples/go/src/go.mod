@@ -3,9 +3,9 @@ module golang-test-app
 go 1.25.7
 
 require (
-	github.com/DataDog/dd-trace-go/contrib/net/http/v2 v2.7.1
-	github.com/DataDog/dd-trace-go/contrib/sirupsen/logrus/v2 v2.7.1
-	github.com/DataDog/dd-trace-go/v2 v2.7.1
+	github.com/DataDog/dd-trace-go/contrib/net/http/v2 v2.7.3
+	github.com/DataDog/dd-trace-go/contrib/sirupsen/logrus/v2 v2.7.3
+	github.com/DataDog/dd-trace-go/v2 v2.7.3
 	github.com/sirupsen/logrus v1.9.4
 )
 
