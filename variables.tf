@@ -22,9 +22,10 @@ variable "datadog_site" {
         "ddog-gov.com",
         "ap1.datadoghq.com",
         "ap2.datadoghq.com",
+        "us2.ddog-gov.com",
       ],
     var.datadog_site)
-    error_message = "Invalid Datadog site. Valid options are: 'datadoghq.com', 'datadoghq.eu', 'us5.datadoghq.com', 'us3.datadoghq.com', 'ddog-gov.com', 'ap1.datadoghq.com', or 'ap2.datadoghq.com'."
+    error_message = "Invalid Datadog site. Valid options are: 'datadoghq.com', 'datadoghq.eu', 'us5.datadoghq.com', 'us3.datadoghq.com', 'ddog-gov.com', 'ap1.datadoghq.com', 'ap2.datadoghq.com', or 'us2.ddog-gov.com'."
   }
 }
 
