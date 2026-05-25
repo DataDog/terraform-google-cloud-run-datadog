@@ -158,7 +158,7 @@ module "example_cloud_run_service" {
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.5.0 |
-| <a name="requirement_google"></a> [google](#requirement\_google) | >= 7.21.0 |
+| <a name="requirement_google"></a> [google](#requirement\_google) | >= 7.33.0 |
 
 ## Modules
 
@@ -223,6 +223,7 @@ No modules.
 | <a name="output_custom_audiences"></a> [custom\_audiences](#output\_custom\_audiences) | One or more custom audiences that you want this service to support. Specify each custom audience as the full URL in a string. The custom audiences are encoded in the token and used to authenticate requests.<br/>For more information, see https://cloud.google.com/run/docs/configuring/custom-audiences. |
 | <a name="output_default_uri_disabled"></a> [default\_uri\_disabled](#output\_default\_uri\_disabled) | Disables public resolution of the default URI of this service. |
 | <a name="output_delete_time"></a> [delete\_time](#output\_delete\_time) | The deletion time. |
+| <a name="output_deletion_policy"></a> [deletion\_policy](#output\_deletion\_policy) | Whether Terraform will be prevented from destroying the instance. Defaults to "DELETE".<br/>When a 'terraform destroy' or 'terraform apply' would delete the instance,<br/>the command will fail if this field is set to "PREVENT" in Terraform state.<br/>When set to "ABANDON", the command will remove the resource from Terraform<br/>management without updating or deleting the resource in the API.<br/>When set to "DELETE", deleting the resource is allowed. |
 | <a name="output_deletion_protection"></a> [deletion\_protection](#output\_deletion\_protection) | Whether Terraform will be prevented from destroying the service. Defaults to true.<br/>When a'terraform destroy' or 'terraform apply' would delete the service,<br/>the command will fail if this field is not set to false in Terraform state.<br/>When the field is set to true or unset in Terraform state, a 'terraform apply'<br/>or 'terraform destroy' that would delete the service will fail.<br/>When the field is set to false, deleting the service is allowed. |
 | <a name="output_description"></a> [description](#output\_description) | User-provided description of the Service. This field currently has a 512-character limit. |
 | <a name="output_effective_annotations"></a> [effective\_annotations](#output\_effective\_annotations) | All of annotations (key/value pairs) present on the resource in GCP, including the annotations configured through Terraform, other clients and services. |
