@@ -64,14 +64,24 @@ jobs:
         if: needs.check-cloud-run-changes.outputs.should_run == 'true' && vars.GCP_WORKLOAD_IDENTITY_PROVIDER_E2E != ''
         uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
 
+      # Mint short-lived Datadog credentials via dd-sts (GitHub OIDC -> Datadog),
+      # so no static API/App keys are stored as repo secrets. Gated on the policy
+      # name being set, which a maintainer does once the dd-sts policy is deployed.
+      - name: Get Datadog credentials (dd-sts)
+        id: dd-sts
+        if: needs.check-cloud-run-changes.outputs.should_run == 'true' && vars.GCP_WORKLOAD_IDENTITY_PROVIDER_E2E != '' && vars.DD_STS_POLICY_E2E != ''
+        uses: DataDog/dd-sts-action@2e8187910199bd93129520183c093e19aa585c75 # v1.0.0
+        with:
+          policy: ${{ vars.DD_STS_POLICY_E2E }}
+
       - name: Run e2e tests
         working-directory: e2e
         run: go test -v -timeout 30m ./...
         env:
-          SKIP_CLOUD_RUN_TESTS: ${{ needs.check-cloud-run-changes.outputs.should_run != 'true' || vars.GCP_WORKLOAD_IDENTITY_PROVIDER_E2E == '' }}
+          SKIP_CLOUD_RUN_TESTS: ${{ needs.check-cloud-run-changes.outputs.should_run != 'true' || vars.GCP_WORKLOAD_IDENTITY_PROVIDER_E2E == '' || vars.DD_STS_POLICY_E2E == '' }}
           GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID_E2E }}
           GCP_REGION: ${{ vars.GCP_REGION_E2E }}
           GCP_CLOUD_RUN_APP_IMAGE_E2E: ${{ vars.GCP_CLOUD_RUN_APP_IMAGE_E2E }}
-          DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY_E2E }}
-          DATADOG_APP_KEY: ${{ secrets.DATADOG_APP_KEY_E2E }}
+          DATADOG_API_KEY: ${{ steps.dd-sts.outputs.api_key }}
+          DATADOG_APP_KEY: ${{ steps.dd-sts.outputs.app_key }}
           DD_SITE: ${{ vars.DD_SITE_E2E }}

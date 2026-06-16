@@ -87,17 +87,22 @@ go test -v -timeout 30m ./...
 ## CI
 
 [`.github/workflows/e2e.yaml`](../.github/workflows/e2e.yaml) runs the suite on
-PRs that touch the module or this directory, authenticating to GCP via OIDC
-workload-identity federation. The job always runs (stable required check) and
-self-skips green via `SKIP_CLOUD_RUN_TESTS` when no relevant files changed or
-when the OIDC federation variables are not yet configured.
+PRs that touch the module or this directory. It authenticates to GCP via OIDC
+workload-identity federation, and mints **short-lived Datadog credentials via
+[dd-sts]** (GitHub OIDC → Datadog) rather than storing static API/App keys. The
+job always runs (stable required check) and self-skips green via
+`SKIP_CLOUD_RUN_TESTS` when no relevant files changed, or when the GCP OIDC
+variables / dd-sts policy are not yet configured.
 
-Repository configuration required (set by a maintainer):
+Repository configuration required (set by a maintainer), all **variables** (no
+secrets):
 
-- **Variables**: `GCP_WORKLOAD_IDENTITY_PROVIDER_E2E`, `GCP_SERVICE_ACCOUNT_E2E`,
-  `GCP_PROJECT_ID_E2E`, `GCP_REGION_E2E`, `GCP_CLOUD_RUN_APP_IMAGE_E2E`,
-  `DD_SITE_E2E`.
-- **Secrets**: `DATADOG_API_KEY_E2E`, `DATADOG_APP_KEY_E2E`.
+- GCP OIDC: `GCP_WORKLOAD_IDENTITY_PROVIDER_E2E`, `GCP_SERVICE_ACCOUNT_E2E`,
+  `GCP_PROJECT_ID_E2E`, `GCP_REGION_E2E`, `GCP_CLOUD_RUN_APP_IMAGE_E2E`.
+- Datadog: `DD_SITE_E2E`, and `DD_STS_POLICY_E2E` (the dd-sts trust-policy name,
+  set once the policy is deployed in `dd-source`). The policy grants an API key
+  for telemetry ingest plus an App key scoped to `apm_read` + `logs_read_data`.
 
 [Terratest]: https://terratest.gruntwork.io/
 [spec]: https://github.com/DataDog/serverless-ci/blob/main/e2e/spec.md
+[dd-sts]: https://datadoghq.atlassian.net/wiki/spaces/SECENG/pages/5769659435/User+guide+dd-sts
