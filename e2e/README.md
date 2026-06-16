@@ -89,7 +89,8 @@ go test -v -timeout 30m ./...
 [`.github/workflows/e2e.yaml`](../.github/workflows/e2e.yaml) runs the suite on
 PRs that touch the module or this directory, authenticating to GCP via OIDC
 workload-identity federation. The job always runs (stable required check) and
-self-skips via `SKIP_CLOUD_RUN_TESTS` when no relevant files changed.
+self-skips green via `SKIP_CLOUD_RUN_TESTS` when no relevant files changed or
+when the OIDC federation variables are not yet configured.
 
 Repository configuration required (set by a maintainer):
 
