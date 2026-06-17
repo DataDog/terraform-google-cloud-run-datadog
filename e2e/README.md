@@ -105,4 +105,4 @@ secrets):
 
 [Terratest]: https://terratest.gruntwork.io/
 [spec]: https://github.com/DataDog/serverless-ci/blob/main/e2e/spec.md
-[dd-sts]: https://datadoghq.atlassian.net/wiki/spaces/SECENG/pages/5769659435/User+guide+dd-sts
+[dd-sts]: https://github.com/DataDog/dd-sts-action
