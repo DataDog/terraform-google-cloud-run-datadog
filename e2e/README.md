@@ -91,8 +91,9 @@ PRs that touch the module or this directory. It authenticates to GCP via OIDC
 workload-identity federation, and mints **short-lived Datadog credentials via
 [dd-sts]** (GitHub OIDC → Datadog) rather than storing static API/App keys. The
 job always runs (stable required check) and self-skips green via
-`SKIP_CLOUD_RUN_TESTS` when no relevant files changed, or when the GCP OIDC
-variables / dd-sts policy are not yet configured.
+`SKIP_CLOUD_RUN_TESTS` when no relevant files changed. When relevant files
+change, the GCP OIDC + dd-sts auth steps must succeed -- an auth or federation
+failure fails the job loudly rather than skipping green.
 
 Repository configuration required (set by a maintainer), all **variables** (no
 secrets):

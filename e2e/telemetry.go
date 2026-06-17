@@ -110,7 +110,7 @@ func spansBody(query string) []byte {
 			},
 		},
 	}
-	b, _ := json.Marshal(body)
+	b, _ := json.Marshal(body) // body is constructed in-code; marshal can't fail
 
 	return b
 }
@@ -121,7 +121,7 @@ func logsBody(query string) []byte {
 		"filter": map[string]any{"query": query, "from": from, "to": to},
 		"page":   map[string]any{"limit": 25},
 	}
-	b, _ := json.Marshal(body)
+	b, _ := json.Marshal(body) // body is constructed in-code; marshal can't fail
 
 	return b
 }
