@@ -99,9 +99,9 @@ secrets):
 
 - GCP OIDC: `GCP_WORKLOAD_IDENTITY_PROVIDER_E2E`, `GCP_SERVICE_ACCOUNT_E2E`,
   `GCP_PROJECT_ID_E2E`, `GCP_REGION_E2E`, `GCP_CLOUD_RUN_APP_IMAGE_E2E`.
-- Datadog: `DD_SITE_E2E`, and `DD_STS_POLICY_E2E` (the dd-sts trust-policy name,
-  set once the policy is deployed in `dd-source`). The policy grants an API key
-  for telemetry ingest plus an App key scoped to `apm_read` + `logs_read_data`.
+- Datadog: `DD_SITE_E2E`. Telemetry auth is federated via [dd-sts]: the workflow's
+  hardcoded `terraform-google-cloud-run-datadog-e2e` policy grants an API key for
+  telemetry ingest plus an App key scoped to `apm_read` + `logs_read_data`.
 
 [Terratest]: https://terratest.gruntwork.io/
 [spec]: https://github.com/DataDog/serverless-ci/blob/main/e2e/spec.md
