@@ -64,27 +64,26 @@ jobs:
           terraform_version: 1.5.7
           terraform_wrapper: false
 
-      # Auth only when both the change filter fired and OIDC federation is
-      # configured. Until a maintainer wires up the repo vars/secrets below,
-      # these steps are skipped and the suite self-skips green.
+      # Auth whenever the change filter fired. The OIDC / dd-sts steps must succeed
+      # when relevant files change -- a federation/auth failure fails the job loudly
+      # rather than skipping green.
       - name: Google Cloud auth (OIDC)
-        if: needs.check-cloud-run-changes.outputs.should_run == 'true' && vars.GCP_WORKLOAD_IDENTITY_PROVIDER_E2E != ''
+        if: needs.check-cloud-run-changes.outputs.should_run == 'true'
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER_E2E }}
           service_account: ${{ vars.GCP_SERVICE_ACCOUNT_E2E }}
 
       - name: Set up Google Cloud CLI
-        if: needs.check-cloud-run-changes.outputs.should_run == 'true' && vars.GCP_WORKLOAD_IDENTITY_PROVIDER_E2E != ''
+        if: needs.check-cloud-run-changes.outputs.should_run == 'true'
         uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
 
       # Mint short-lived Datadog credentials via dd-sts (GitHub OIDC -> Datadog),
       # so no static API/App keys are stored as repo secrets. The policy lives in
-      # dd-source; until it deploys, the OIDC step above stays unconfigured and the
-      # suite self-skips green.
+      # dd-source; if dd-sts can't mint a key the suite fails loudly.
       - name: Get Datadog credentials (dd-sts)
         id: dd-sts
-        if: needs.check-cloud-run-changes.outputs.should_run == 'true' && vars.GCP_WORKLOAD_IDENTITY_PROVIDER_E2E != ''
+        if: needs.check-cloud-run-changes.outputs.should_run == 'true'
         uses: DataDog/dd-sts-action@2e8187910199bd93129520183c093e19aa585c75 # v1.0.0
         with:
           policy: terraform-google-cloud-run-datadog-e2e
@@ -93,7 +92,7 @@ jobs:
         working-directory: e2e
         run: go test -v -timeout 30m ./...
         env:
-          SKIP_CLOUD_RUN_TESTS: ${{ needs.check-cloud-run-changes.outputs.should_run != 'true' || vars.GCP_WORKLOAD_IDENTITY_PROVIDER_E2E == '' }}
+          SKIP_CLOUD_RUN_TESTS: ${{ needs.check-cloud-run-changes.outputs.should_run != 'true' }}
           GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID_E2E }}
           GCP_REGION: ${{ vars.GCP_REGION_E2E }}
           GCP_CLOUD_RUN_APP_IMAGE_E2E: ${{ vars.GCP_CLOUD_RUN_APP_IMAGE_E2E }}
