@@ -98,16 +98,6 @@ func (s cloudRunService) getLabels() map[string]string {
 	return s.Metadata.Labels
 }
 
-func (c container) envValue(name string) (string, bool) {
-	for _, e := range c.Env {
-		if e.Name == name {
-			return e.Value, true
-		}
-	}
-
-	return "", false
-}
-
 // envMap flattens a container's env vars into a map for the shared verification helpers.
 func (c container) envMap() map[string]string {
 	m := make(map[string]string, len(c.Env))
