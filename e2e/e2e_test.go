@@ -4,13 +4,17 @@
 package e2e
 
 import (
+	"context"
 	"net/http"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/require"
+
+	e2eshared "github.com/DataDog/terraform-google-cloud-run-datadog/e2e/shared"
 )
 
 // Pinned artifacts. Failures should blame this module, not upstream drift, so
@@ -80,26 +84,30 @@ func loadConfig(t *testing.T) config {
 // assert re-apply is a no-op, then destroy and verify no residue.
 func TestCloudRunE2E(t *testing.T) {
 	cfg := loadConfig(t)
+	ctx := context.Background()
 
-	r, err := newRun()
-	require.NoError(t, err)
-	t.Logf("run id %s -> service %s", r.id, r.serviceName)
+	// one-e2e-tf-cloud-run-<runid>: identity + sweeper blast-radius guard. The freshness
+	// timestamp is captured now, at creation time, and mirrored into a GCP label.
+	runID := e2eshared.NewRunID()
+	serviceName := e2eshared.ResourceName(sharedCfg, runID)
+	createdTS := strconv.FormatInt(time.Now().Unix(), 10)
+	t.Logf("run id %s -> service %s", runID, serviceName)
 
 	tfOpts := &terraform.Options{
 		TerraformDir: "fixture",
 		Vars: map[string]interface{}{
 			"project":         cfg.project,
 			"region":          cfg.region,
-			"name":            r.serviceName,
+			"name":            serviceName,
 			"workload_image":  cfg.workloadImage,
 			"sidecar_image":   cfg.sidecarImage,
 			"datadog_api_key": cfg.ddAPIKey,
 			"datadog_site":    cfg.site,
-			"datadog_service": r.serviceName,
+			"datadog_service": serviceName,
 			"datadog_env":     testEnv,
 			"datadog_version": testVersion,
-			"run_id":          r.id,
-			"created_ts":      r.createdTS,
+			"run_id":          runID,
+			"created_ts":      createdTS,
 		},
 		// Retry the cloud, not the assertions: bounded retries on transient
 		// control-plane errors only.
@@ -121,15 +129,29 @@ func TestCloudRunE2E(t *testing.T) {
 	// REMOVE step below destroys first, leaving this a no-op on success.
 	defer terraform.Destroy(t, tfOpts)
 
+	exp := Expectations{
+		ServiceName: serviceName,
+		Env:         testEnv,
+		Version:     testVersion,
+		RunID:       runID,
+		Site:        cfg.site,
+		CreatedTS:   createdTS,
+	}
+
 	// APPLY -> verify CONFIG.
 	terraform.InitAndApply(t, tfOpts)
-	verifyInstrumented(t, r, cfg.project, cfg.region, cfg.site, testEnv, testVersion)
+	svc, _, err := describeService(ctx, serviceName, cfg.project, cfg.region)
+	require.NoError(t, err, "describe instrumented service")
+	require.NoError(t, verifyInstrumented(svc, exp))
 
 	// Trigger workload -> verify TELEMETRY flows.
 	uri := terraform.Output(t, tfOpts, "service_uri")
 	require.NotEmpty(t, uri, "service URI output")
 	triggerWorkload(t, uri)
-	checkTelemetryFlowing(t, telemetryConfig{apiKey: cfg.ddAPIKey, appKey: cfg.ddAPPKey, site: cfg.site}, r, testEnv, uri)
+	client := e2eshared.NewTelemetryClient(cfg.site, cfg.ddAPIKey, cfg.ddAPPKey)
+	telemetryCtx, cancel := context.WithTimeout(ctx, 12*time.Minute)
+	defer cancel()
+	require.NoError(t, checkTelemetryFlowing(telemetryCtx, client, serviceName, runID, testEnv, uri))
 
 	// Re-APPLY -> assert idempotent (no diff, no duplicate).
 	exitCode := terraform.PlanExitCode(t, tfOpts)
@@ -137,7 +159,8 @@ func TestCloudRunE2E(t *testing.T) {
 
 	// REMOVE -> verify CLEAN end-state.
 	terraform.Destroy(t, tfOpts)
-	verifyClean(t, r, cfg.project, cfg.region)
+	_, res, describeErr := describeService(ctx, serviceName, cfg.project, cfg.region)
+	require.NoError(t, verifyClean(res, describeErr))
 }
 
 // triggerWorkload issues HTTP GETs against the service to drive a log line and
