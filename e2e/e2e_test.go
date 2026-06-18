@@ -129,7 +129,7 @@ func TestCloudRunE2E(t *testing.T) {
 	uri := terraform.Output(t, tfOpts, "service_uri")
 	require.NotEmpty(t, uri, "service URI output")
 	triggerWorkload(t, uri)
-	checkTelemetryFlowing(t, telemetryConfig{apiKey: cfg.ddAPIKey, appKey: cfg.ddAPPKey, site: cfg.site}, r, testEnv)
+	checkTelemetryFlowing(t, telemetryConfig{apiKey: cfg.ddAPIKey, appKey: cfg.ddAPPKey, site: cfg.site}, r, testEnv, uri)
 
 	// Re-APPLY -> assert idempotent (no diff, no duplicate).
 	exitCode := terraform.PlanExitCode(t, tfOpts)

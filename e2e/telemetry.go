@@ -37,8 +37,22 @@ type searchResponse struct {
 // run-id marker tag -- so a non-empty result asserts identity, not mere
 // existence. (version is asserted in the config check; the tracer does not
 // reliably stamp it on spans, which is upstream behaviour.)
-func checkTelemetryFlowing(t *testing.T, cfg telemetryConfig, r run, env string) {
+//
+// The workload is exercised continuously for the duration of the poll. The
+// serverless-init sidecar tails the app's log file from the end (the right
+// choice for ephemeral runtimes, so a restart never replays stale logs), so
+// only lines written after the sidecar attaches its tailer are forwarded. The
+// app boots faster than the agent, so the lines emitted by the up-front trigger
+// already sit behind the tail offset and never ship; without fresh traffic the
+// logs assertion times out even though logging is wired correctly. Spans don't
+// need this -- the tracer pushes them over HTTP immediately, independent of any
+// file offset.
+func checkTelemetryFlowing(t *testing.T, cfg telemetryConfig, r run, env, uri string) {
 	t.Helper()
+
+	stopTraffic := make(chan struct{})
+	defer close(stopTraffic)
+	go generateTraffic(uri, stopTraffic)
 
 	query := fmt.Sprintf("service:%s env:%s %s:%s", r.serviceName, env, runIDTag, r.id)
 
@@ -61,6 +75,32 @@ func checkTelemetryFlowing(t *testing.T, cfg telemetryConfig, r run, env string)
 	for i := 0; i < 2; i++ {
 		res := <-results
 		require.NoError(t, res.err, "%s telemetry did not flow with matching identity", res.label)
+	}
+}
+
+// generateTraffic drives the workload on a steady cadence until stop is closed,
+// so the sidecar's file tailer (which reads from the end) always has fresh log
+// lines to forward while the telemetry poll runs. Errors are ignored: this is a
+// best-effort log generator, and the telemetry assertions are what gate the test.
+func generateTraffic(uri string, stop <-chan struct{}) {
+	client := &http.Client{Timeout: 30 * time.Second}
+	hit := func() {
+		resp, err := client.Get(uri)
+		if err == nil {
+			resp.Body.Close()
+		}
+	}
+
+	hit() // don't wait a full interval to start producing logs
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-stop:
+			return
+		case <-ticker.C:
+			hit()
+		}
 	}
 }
 
