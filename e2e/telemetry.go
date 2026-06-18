@@ -6,7 +6,6 @@ package e2e
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"strings"
 	"time"
 
@@ -30,9 +29,9 @@ import (
 // is wired correctly. Spans don't need this -- the tracer pushes them over HTTP
 // immediately, independent of any file offset.
 func checkTelemetryFlowing(ctx context.Context, client *e2eshared.TelemetryClient, serviceName, runID, env, uri string) error {
-	stopTraffic := make(chan struct{})
-	defer close(stopTraffic)
-	go generateTraffic(uri, stopTraffic)
+	tctx, stopTraffic := context.WithCancel(ctx)
+	defer stopTraffic()
+	go e2eshared.GenerateTraffic(tctx, uri, 5*time.Second)
 
 	// service + env + run-id marker, no version (see doc comment).
 	query := fmt.Sprintf("service:%s env:%s %s:%s", serviceName, env, e2eshared.DefaultRunIDTagKey, runID)
@@ -112,30 +111,4 @@ func pollUntilMatch(
 
 	return fmt.Errorf("[%s] timed out after %d attempts (%s): %w",
 		label, telemetryMaxAttempts, time.Duration(telemetryMaxAttempts)*telemetryPollInterval, lastErr)
-}
-
-// generateTraffic drives the workload on a steady cadence until stop is closed, so the
-// sidecar's file tailer (which reads from the end) always has fresh log lines to forward
-// while the telemetry poll runs. Errors are ignored: this is a best-effort log
-// generator, and the telemetry assertions are what gate the test.
-func generateTraffic(uri string, stop <-chan struct{}) {
-	client := &http.Client{Timeout: 30 * time.Second}
-	hit := func() {
-		resp, err := client.Get(uri)
-		if err == nil {
-			resp.Body.Close()
-		}
-	}
-
-	hit() // don't wait a full interval to start producing logs
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-stop:
-			return
-		case <-ticker.C:
-			hit()
-		}
-	}
 }
