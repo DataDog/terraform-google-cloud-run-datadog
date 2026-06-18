@@ -80,8 +80,12 @@ variables are absent.
 cd e2e
 export GCP_PROJECT_ID=datadog-serverless-gcp-dev
 export GCP_REGION=us-central1
-export DATADOG_API_KEY=... DATADOG_APP_KEY=...
-go test -v -timeout 30m ./...
+
+# Datadog auth: dd-auth mints short-lived keys for the org -- no pasted keys.
+dd-auth --domain app.datadoghq.com -- bash -c '
+  export DATADOG_API_KEY="$DD_API_KEY" DATADOG_APP_KEY="$DD_APP_KEY"
+  go test -v -timeout 30m ./...
+'
 ```
 
 ## CI
