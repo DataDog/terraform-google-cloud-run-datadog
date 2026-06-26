@@ -144,7 +144,7 @@ locals {
             { for env in coalesce(container.env, []) : env.name => env.value if env.value_source == null },
             # always override user configuration with these env vars
             { DD_SERVERLESS_LOG_PATH = var.datadog_logging_path }
-          ) : { name = name, value = value, value_source = {} }]
+          ) : { name = name, value = value, value_source = null }]
         )
         # User-check 3: check for each provided container the volume mounts and if logging is enabled and the shared volume is an input, do not mount it again
         volume_mounts = concat(
