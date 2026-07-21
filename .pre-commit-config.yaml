@@ -8,6 +8,18 @@ repos:
         exclude: ^(LICENSE-3rdparty\.csv|NOTICE)
   - repo: local
     hooks:
+      - id: go-format
+        name: format Go
+        entry: gofmt -w
+        language: system
+        types: [go]
+        exclude: ^e2e/shared/
+      - id: go-mod-tidy
+        name: tidy Go modules and workspace
+        entry: bash -c 'GOWORK=off go -C e2e mod tidy && GOWORK=off go -C examples/go/src mod tidy && go work sync'
+        language: system
+        pass_filenames: false
+        files: ^(e2e/|examples/go/src/).*\.(go|mod|sum)$|^go\.work(\.sum)?$
       - id: terraform-format
         name: format terraform
         entry: terraform fmt -recursive .
