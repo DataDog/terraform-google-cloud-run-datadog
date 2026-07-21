@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	run "cloud.google.com/go/run/apiv2"
+	"github.com/gruntwork-io/terratest/modules/logger"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/require"
 
@@ -21,7 +23,9 @@ import (
 // the workload app and the serverless-init sidecar are pinned by digest. CI may
 // override the workload image via GCP_CLOUD_RUN_APP_IMAGE_E2E.
 const (
-	defaultWorkloadImage = "gcr.io/dd-dev-serverless-selfmonitor/self-monitoring-cloud-run-node-sidecar-prod@sha256:af6be6d911d4b6a51efae6022fab6522d39247199b5a4f7923e302128921dfd0"
+	defaultProject       = "datadog-serverless-gcp-dev"
+	defaultRegion        = "us-central1"
+	defaultWorkloadImage = "gcr.io/datadog-serverless-gcp-dev/run-nodejs-sidecar@sha256:010d0e9990ac1bb8874322f9a6795f0833c9267d40f9a2b9e9779980bba5ba19"
 	defaultSidecarImage  = "gcr.io/datadoghq/serverless-init@sha256:6fb7637628fdf31d536bc9c49fbe6304371df5e2ecdb15c1c2d5e2d66395c3a0"
 
 	// One canonical runtime; exhaustiveness across runtimes lives upstream.
@@ -41,18 +45,13 @@ type config struct {
 	ddAPPKey      string
 }
 
-// loadConfig reads the suite's inputs from the environment, skipping (not
-// failing) when the suite is disabled or required inputs are absent -- so CI
-// stays green before OIDC/secrets are wired, and local runs get a clear skip.
+// loadConfig reads the suite's required inputs from the environment.
 func loadConfig(t *testing.T) config {
 	t.Helper()
-	if os.Getenv("SKIP_CLOUD_RUN_TESTS") == "true" {
-		t.Skip("SKIP_CLOUD_RUN_TESTS=true")
-	}
 
 	cfg := config{
-		project:       os.Getenv("GCP_PROJECT_ID"),
-		region:        os.Getenv("GCP_REGION"),
+		project:       firstNonEmpty(os.Getenv("GCP_PROJECT_ID"), defaultProject),
+		region:        firstNonEmpty(os.Getenv("GCP_REGION"), defaultRegion),
 		workloadImage: firstNonEmpty(os.Getenv("GCP_CLOUD_RUN_APP_IMAGE_E2E"), defaultWorkloadImage),
 		sidecarImage:  firstNonEmpty(os.Getenv("DD_SIDECAR_IMAGE_E2E"), defaultSidecarImage),
 		site:          firstNonEmpty(os.Getenv("DD_SITE"), "datadoghq.com"),
@@ -62,8 +61,6 @@ func loadConfig(t *testing.T) config {
 
 	missing := []string{}
 	for name, val := range map[string]string{
-		"GCP_PROJECT_ID":             cfg.project,
-		"GCP_REGION":                 cfg.region,
 		"DATADOG_API_KEY/DD_API_KEY": cfg.ddAPIKey,
 		"DATADOG_APP_KEY/DD_APP_KEY": cfg.ddAPPKey,
 	} {
@@ -72,7 +69,7 @@ func loadConfig(t *testing.T) config {
 		}
 	}
 	if len(missing) > 0 {
-		t.Skipf("missing required env for e2e: %v", missing)
+		t.Fatalf("missing required env for e2e: %v", missing)
 	}
 
 	return cfg
@@ -85,6 +82,9 @@ func loadConfig(t *testing.T) config {
 func TestCloudRunE2E(t *testing.T) {
 	cfg := loadConfig(t)
 	ctx := context.Background()
+	cloudRun, err := run.NewServicesClient(ctx)
+	require.NoError(t, err, "create Cloud Run client")
+	defer cloudRun.Close()
 
 	// one-e2e-tf-cloud-run-<runid>: identity + sweeper blast-radius guard. The freshness
 	// timestamp is captured now, at creation time, and mirrored into a GCP label.
@@ -101,13 +101,16 @@ func TestCloudRunE2E(t *testing.T) {
 			"name":            serviceName,
 			"workload_image":  cfg.workloadImage,
 			"sidecar_image":   cfg.sidecarImage,
-			"datadog_api_key": cfg.ddAPIKey,
 			"datadog_site":    cfg.site,
 			"datadog_service": serviceName,
 			"datadog_env":     testEnv,
 			"datadog_version": testVersion,
 			"run_id":          runID,
 			"created_ts":      createdTS,
+		},
+		// Pass secrets by environment so Terratest never prints them as CLI arguments.
+		EnvVars: map[string]string{
+			"TF_VAR_datadog_api_key": cfg.ddAPIKey,
 		},
 		// Retry the cloud, not the assertions: bounded retries on transient
 		// control-plane errors only.
@@ -123,6 +126,7 @@ func TestCloudRunE2E(t *testing.T) {
 		MaxRetries:         3,
 		TimeBetweenRetries: 10 * time.Second,
 		NoColor:            true,
+		Logger:             logger.Discard,
 	}
 
 	// Teardown always, even on failure. This is a safety net; the asserted
@@ -130,21 +134,25 @@ func TestCloudRunE2E(t *testing.T) {
 	defer terraform.Destroy(t, tfOpts)
 
 	exp := Expectations{
-		ServiceName: serviceName,
-		Env:         testEnv,
-		Version:     testVersion,
-		RunID:       runID,
-		Site:        cfg.site,
-		CreatedTS:   createdTS,
+		ServiceName:  serviceName,
+		Env:          testEnv,
+		Version:      testVersion,
+		RunID:        runID,
+		Site:         cfg.site,
+		SidecarImage: cfg.sidecarImage,
+		CreatedTS:    createdTS,
 	}
 
 	// APPLY -> verify CONFIG.
+	t.Log("applying the Cloud Run service")
 	terraform.InitAndApply(t, tfOpts)
-	svc, _, err := describeService(ctx, serviceName, cfg.project, cfg.region)
+	t.Log("verifying the deployed service")
+	svc, err := describeService(ctx, cloudRun, serviceName, cfg.project, cfg.region)
 	require.NoError(t, err, "describe instrumented service")
 	require.NoError(t, verifyInstrumented(svc, exp))
 
 	// Trigger workload -> verify TELEMETRY flows.
+	t.Log("triggering the workload and checking Datadog telemetry")
 	uri := terraform.Output(t, tfOpts, "service_uri")
 	require.NotEmpty(t, uri, "service URI output")
 	triggerWorkload(t, uri)
@@ -154,13 +162,15 @@ func TestCloudRunE2E(t *testing.T) {
 	require.NoError(t, checkTelemetryFlowing(telemetryCtx, client, serviceName, runID, testEnv, uri))
 
 	// Re-APPLY -> assert idempotent (no diff, no duplicate).
+	t.Log("checking Terraform idempotence")
 	exitCode := terraform.PlanExitCode(t, tfOpts)
 	require.Equal(t, 0, exitCode, "re-apply must be a no-op: terraform plan reported a diff")
 
 	// REMOVE -> verify CLEAN end-state.
+	t.Log("removing the Cloud Run service")
 	terraform.Destroy(t, tfOpts)
-	_, res, describeErr := describeService(ctx, serviceName, cfg.project, cfg.region)
-	require.NoError(t, verifyClean(res, describeErr))
+	_, describeErr := describeService(ctx, cloudRun, serviceName, cfg.project, cfg.region)
+	require.NoError(t, verifyClean(describeErr))
 }
 
 // triggerWorkload issues HTTP GETs against the service to drive a log line and
