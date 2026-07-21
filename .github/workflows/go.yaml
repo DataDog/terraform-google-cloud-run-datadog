@@ -1,0 +1,52 @@
+name: Go Checks
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    paths:
+      - '**/*.go'
+      - '**/go.mod'
+      - '**/go.sum'
+      - 'go.work'
+      - 'go.work.sum'
+      - '.pre-commit-config.yaml'
+      - '.github/workflows/go.yaml'
+
+jobs:
+  go-checks:
+    name: Check Go formatting and modules
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.work
+          cache-dependency-path: |
+            e2e/go.sum
+            examples/go/src/go.sum
+            go.work.sum
+
+      - name: Check Go formatting
+        run: |
+          unformatted="$(find e2e examples/go/src -name '*.go' -not -path 'e2e/shared/*' -exec gofmt -l {} +)"
+          if [ -n "$unformatted" ]; then
+            echo "The following files are not formatted:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Check Go modules and workspace
+        run: |
+          GOWORK=off go -C e2e mod tidy
+          GOWORK=off go -C examples/go/src mod tidy
+          go work sync
+          git diff --exit-code -- \
+            e2e/go.mod e2e/go.sum \
+            examples/go/src/go.mod examples/go/src/go.sum \
+            go.work go.work.sum
