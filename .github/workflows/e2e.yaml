@@ -19,10 +19,6 @@ on:
       - '.github/workflows/e2e.yaml'
   workflow_dispatch:
 
-concurrency:
-  group: e2e-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   e2e:
     name: End-to-end test the module
