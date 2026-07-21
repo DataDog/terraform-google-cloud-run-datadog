@@ -6,7 +6,9 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
+	"testing"
 	"time"
 
 	e2eshared "github.com/DataDog/terraform-google-cloud-run-datadog/e2e/shared"
@@ -28,7 +30,7 @@ import (
 // and never ship; without fresh traffic the logs assertion times out even though logging
 // is wired correctly. Spans don't need this -- the tracer pushes them over HTTP
 // immediately, independent of any file offset.
-func checkTelemetryFlowing(ctx context.Context, client *e2eshared.TelemetryClient, serviceName, runID, env, uri string) error {
+func checkTelemetryFlowing(ctx context.Context, t *testing.T, client *e2eshared.TelemetryClient, serviceName, runID, env, uri string) error {
 	tctx, stopTraffic := context.WithCancel(ctx)
 	defer stopTraffic()
 	go e2eshared.GenerateTraffic(tctx, uri, 5*time.Second)
@@ -47,14 +49,14 @@ func checkTelemetryFlowing(ctx context.Context, client *e2eshared.TelemetryClien
 	}
 	results := make(chan result, 2)
 	go func() {
-		results <- result{"spans", pollUntilMatch(ctx, client, "spans", client.SearchSpans, query, match)}
+		results <- result{"spans", pollUntilMatch(ctx, t, client, "spans", client.SearchSpans, query, match)}
 	}()
 	go func() {
-		results <- result{"logs", pollUntilMatch(ctx, client, "logs", client.SearchLogs, query, match)}
+		results <- result{"logs", pollUntilMatch(ctx, t, client, "logs", client.SearchLogs, query, match)}
 	}()
 
 	var errs []string
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		res := <-results
 		if res.err != nil {
 			errs = append(errs, fmt.Sprintf("%s telemetry did not flow with matching identity: %v", res.label, res.err))
@@ -77,6 +79,7 @@ const (
 // never declaring success without a matching event.
 func pollUntilMatch(
 	ctx context.Context,
+	t *testing.T,
 	_ *e2eshared.TelemetryClient,
 	label string,
 	search func(context.Context, string) ([]e2eshared.Event, error),
@@ -85,14 +88,14 @@ func pollUntilMatch(
 ) error {
 	var lastErr error
 	for attempt := 1; attempt <= telemetryMaxAttempts; attempt++ {
+		t.Logf("checking %s telemetry (attempt %d/%d)", label, attempt, telemetryMaxAttempts)
 		events, err := search(ctx, query)
 		if err != nil {
 			lastErr = err
 		} else {
-			for _, e := range events {
-				if match(e) {
-					return nil
-				}
+			if slices.ContainsFunc(events, match) {
+				t.Logf("found matching %s telemetry", label)
+				return nil
 			}
 			if len(events) > 0 {
 				lastErr = fmt.Errorf("%d %s found for query %q but none carried the run identity", len(events), label, query)

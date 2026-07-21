@@ -144,33 +144,85 @@ func TestCloudRunE2E(t *testing.T) {
 	}
 
 	// APPLY -> verify CONFIG.
-	t.Log("applying the Cloud Run service")
-	terraform.InitAndApply(t, tfOpts)
-	t.Log("verifying the deployed service")
-	svc, err := describeService(ctx, cloudRun, serviceName, cfg.project, cfg.region)
-	require.NoError(t, err, "describe instrumented service")
-	require.NoError(t, verifyInstrumented(svc, exp))
+	func() {
+		done := logProgress(t, "applying the Cloud Run service")
+		defer done()
+		terraform.InitAndApply(t, tfOpts)
+	}()
+	func() {
+		done := logProgress(t, "verifying the deployed configuration")
+		defer done()
+		svc, err := describeService(ctx, cloudRun, serviceName, cfg.project, cfg.region)
+		require.NoError(t, err, "describe instrumented service")
+		require.NoError(t, verifyInstrumented(svc, exp))
+	}()
 
 	// Trigger workload -> verify TELEMETRY flows.
-	t.Log("triggering the workload and checking Datadog telemetry")
 	uri := terraform.Output(t, tfOpts, "service_uri")
 	require.NotEmpty(t, uri, "service URI output")
-	triggerWorkload(t, uri)
+	func() {
+		done := logProgress(t, "triggering the workload")
+		defer done()
+		triggerWorkload(t, uri)
+	}()
 	client := e2eshared.NewTelemetryClient(cfg.site, cfg.ddAPIKey, cfg.ddAPPKey)
 	telemetryCtx, cancel := context.WithTimeout(ctx, 12*time.Minute)
 	defer cancel()
-	require.NoError(t, checkTelemetryFlowing(telemetryCtx, client, serviceName, runID, testEnv, uri))
+	func() {
+		done := logProgress(t, "waiting for Datadog telemetry")
+		defer done()
+		require.NoError(t, checkTelemetryFlowing(telemetryCtx, t, client, serviceName, runID, testEnv, uri))
+	}()
 
 	// Re-APPLY -> assert idempotent (no diff, no duplicate).
-	t.Log("checking Terraform idempotence")
-	exitCode := terraform.PlanExitCode(t, tfOpts)
-	require.Equal(t, 0, exitCode, "re-apply must be a no-op: terraform plan reported a diff")
+	func() {
+		done := logProgress(t, "checking Terraform idempotence")
+		defer done()
+		exitCode := terraform.PlanExitCode(t, tfOpts)
+		require.Equal(t, 0, exitCode, "re-apply must be a no-op: terraform plan reported a diff")
+	}()
 
 	// REMOVE -> verify CLEAN end-state.
-	t.Log("removing the Cloud Run service")
-	terraform.Destroy(t, tfOpts)
-	_, describeErr := describeService(ctx, cloudRun, serviceName, cfg.project, cfg.region)
-	require.NoError(t, verifyClean(describeErr))
+	func() {
+		done := logProgress(t, "removing the Cloud Run service")
+		defer done()
+		terraform.Destroy(t, tfOpts)
+	}()
+	func() {
+		done := logProgress(t, "verifying cleanup")
+		defer done()
+		_, describeErr := describeService(ctx, cloudRun, serviceName, cfg.project, cfg.region)
+		require.NoError(t, verifyClean(describeErr))
+	}()
+}
+
+// logProgress reports phase boundaries and emits a heartbeat while a phase is running.
+func logProgress(t *testing.T, phase string) func() {
+	t.Helper()
+	started := time.Now()
+	t.Logf("START: %s", phase)
+
+	stop := make(chan struct{})
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				t.Logf("RUNNING: %s (%s elapsed)", phase, time.Since(started).Round(time.Second))
+			case <-stop:
+				return
+			}
+		}
+	}()
+
+	return func() {
+		close(stop)
+		<-done
+		t.Logf("DONE: %s (%s)", phase, time.Since(started).Round(time.Second))
+	}
 }
 
 // triggerWorkload issues HTTP GETs against the service to drive a log line and
