@@ -153,7 +153,7 @@ variable "datadog_apm_instrumentation" {
     language       = string
     tracer_version = optional(string, "latest")
   })
-  description = "Optional Single-Language SSI settings. When null (default), no tracer-copy sidecar or language injection env vars are added; the Datadog agent sidecar still runs as usual."
+  description = "Enables auto-instrumentation via a tracer sidecar"
   validation {
     condition = var.datadog_apm_instrumentation == null || contains(
       [

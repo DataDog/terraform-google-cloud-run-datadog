@@ -15,7 +15,7 @@ resource "google_cloud_run_v2_service" "this" {
   ingress              = try(var.ingress, null)
   invoker_iam_disabled = try(var.invoker_iam_disabled, null)
   labels               = local.labels
-  launch_stage         = try(var.launch_stage, null)
+  launch_stage         = local.launch_stage
   location             = var.location
   name                 = var.name
   project              = try(var.project, null)
@@ -48,9 +48,12 @@ resource "google_cloud_run_v2_service" "this" {
     }
   }
   dynamic "scaling" {
-    for_each = try(var.scaling, null) != null ? [true] : []
+    for_each = local.scaling != null ? [true] : []
     content {
-      scaling_mode = try(var.scaling.scaling_mode, null)
+      manual_instance_count = try(local.scaling.manual_instance_count, null)
+      max_instance_count    = try(local.scaling.max_instance_count, null)
+      min_instance_count    = try(local.scaling.min_instance_count, null)
+      scaling_mode          = try(local.scaling.scaling_mode, null)
     }
   }
   template {

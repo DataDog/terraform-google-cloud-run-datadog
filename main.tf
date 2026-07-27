@@ -55,17 +55,17 @@ locals {
   # Base env vars the module always owns
   module_controlled_env_vars = concat(
     [
-    "DD_API_KEY",
-    "DD_SITE",
-    "DD_SERVICE",
-    "DD_HEALTH_PORT",
-    "DD_VERSION",
-    "DD_ENV",
-    "DD_TAGS",
-    "DD_LOG_LEVEL",
-    "DD_SERVERLESS_LOG_PATH",
-    "FUNCTION_TARGET",
-    "DD_LOGS_INJECTION", # this is not an env var needed on the sidecar anyways
+      "DD_API_KEY",
+      "DD_SITE",
+      "DD_SERVICE",
+      "DD_HEALTH_PORT",
+      "DD_VERSION",
+      "DD_ENV",
+      "DD_TAGS",
+      "DD_LOG_LEVEL",
+      "DD_SERVERLESS_LOG_PATH",
+      "FUNCTION_TARGET",
+      "DD_LOGS_INJECTION", # this is not an env var needed on the sidecar anyways
     ],
     # these vars are appended only when datadog_apm_instrumentation is enabled
     local.apm_enabled ? concat(
@@ -220,32 +220,32 @@ locals {
       merge(
         container,
         {
-        env = concat(
-          # First, preserve user-defined env vars with value_source
-          [for env in coalesce(container.env, []) : { name = env.name, value = env.value, value_source = env.value_source }
-          if env.value_source != null && !contains(local.module_controlled_env_vars, env.name)],
-          # Then add module-managed env vars
-          [for name, value in merge(
-            # variables which can be overrided by user provided configuration
-            local.shared_env_vars,
-            { DD_LOGS_INJECTION = "true" },
-            # user provided env vars (without value_source) converted to map
-            { for env in coalesce(container.env, []) : env.name => env.value if env.value_source == null },
-            # always override user configuration with these env vars
-            { DD_SERVERLESS_LOG_PATH = var.datadog_logging_path },
-            # Single-Language SSI native env vars (language-specific tracer loading)
-            local.apm_language_env_vars,
-          ) : { name = name, value = value, value_source = null }]
-        )
-        # User-check 3: check for each provided container the volume mounts and if logging is enabled and the shared volume is an input, do not mount it again
-        volume_mounts = concat(
-          var.datadog_enable_logging ? [var.datadog_shared_volume] : [],
-          local.apm_enabled ? [{
-            name       = local.tracer_volume_name
-            mount_path = local.tracer_volume_mount_path
-          }] : [],
-          [for vm in coalesce(container.volume_mounts, []) : vm if contains(local.filtered_volume_mounts, vm)],
-        )
+          env = concat(
+            # First, preserve user-defined env vars with value_source
+            [for env in coalesce(container.env, []) : { name = env.name, value = env.value, value_source = env.value_source }
+            if env.value_source != null && !contains(local.module_controlled_env_vars, env.name)],
+            # Then add module-managed env vars
+            [for name, value in merge(
+              # variables which can be overrided by user provided configuration
+              local.shared_env_vars,
+              { DD_LOGS_INJECTION = "true" },
+              # user provided env vars (without value_source) converted to map
+              { for env in coalesce(container.env, []) : env.name => env.value if env.value_source == null },
+              # always override user configuration with these env vars
+              { DD_SERVERLESS_LOG_PATH = var.datadog_logging_path },
+              # Single-Language SSI native env vars (language-specific tracer loading)
+              local.apm_language_env_vars,
+            ) : { name = name, value = value, value_source = null }]
+          )
+          # User-check 3: check for each provided container the volume mounts and if logging is enabled and the shared volume is an input, do not mount it again
+          volume_mounts = concat(
+            var.datadog_enable_logging ? [var.datadog_shared_volume] : [],
+            local.apm_enabled ? [{
+              name       = local.tracer_volume_name
+              mount_path = local.tracer_volume_mount_path
+            }] : [],
+            [for vm in coalesce(container.volume_mounts, []) : vm if contains(local.filtered_volume_mounts, vm)],
+          )
         },
         # When SSI is enabled, wrap startup to wait for copy-lib's marker before exec'ing
         # the container command/args
@@ -258,7 +258,7 @@ locals {
             ],
             coalesce(container.command, []),
             coalesce(container.args, []),
-        )
+          )
         } : {},
     )],
     # We add the sidecar at the end due to an issue where cloud sql mounts are always
@@ -274,8 +274,11 @@ locals {
   tracer_volume = local.apm_enabled ? [{
     name = local.tracer_volume_name
     empty_dir = {
-      medium     = "MEMORY"
-      size_limit = "100Mi"
+      # Disk-backed emptyDir needs launch_stage BETA (see local.launch_stage).
+      # and least 10Gi size_limit.; ephemeral-disk quota is
+      # roughly size_limit * scaling.max_instance_count (see local.scaling).
+      medium     = "DISK"
+      size_limit = "10Gi"
     }
   }] : []
 
@@ -288,6 +291,21 @@ locals {
   }] : []
 
   template_volumes = concat(local.volumes_without_shared_volume, local.tracer_volume, local.logger_volume)
+
+  # emptyDir medium=DISK is a Cloud Run BETA feature; force at least BETA when SSI is on.
+  # Preserve ALPHA if the caller already opted into it.
+  launch_stage = local.apm_enabled ? (
+    var.launch_stage == "ALPHA" ? "ALPHA" : "BETA"
+  ) : var.launch_stage
+
+  # With a 10Gi DISK emptyDir, default project ephemeral-disk quota (~100Gi) allows
+  # at most 10 instances. Cap (or default) max_instance_count accordingly when SSI is on.
+  scaling = local.apm_enabled ? {
+    scaling_mode          = try(var.scaling.scaling_mode, null)
+    min_instance_count    = try(var.scaling.min_instance_count, null)
+    manual_instance_count = try(var.scaling.manual_instance_count, null)
+    max_instance_count    = min(coalesce(try(var.scaling.max_instance_count, null), 10), 10)
+  } : var.scaling
 }
 
 
