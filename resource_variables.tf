@@ -144,6 +144,16 @@ variable "project" {
   default = null
 }
 
+variable "tags" {
+  type        = map(string)
+  default     = null
+  description = <<DESCRIPTION
+A map of resource manager tags.
+Resource manager tag keys and values have the same definition as resource manager tags.
+Keys must be in the format tagKeys/{tag_key_id}, and values are in the format tagValues/{tag_value_id}.
+DESCRIPTION
+}
+
 variable "binary_authorization" {
   type = object({
     breakglass_justification = optional(string),
