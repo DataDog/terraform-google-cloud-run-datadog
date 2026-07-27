@@ -153,6 +153,7 @@ variable "datadog_apm_instrumentation" {
     language       = string
     tracer_version = optional(string, "latest")
   })
+  description = "Optional Single-Language SSI settings. When null (default), no tracer-copy sidecar or language injection env vars are added; the Datadog agent sidecar still runs as usual."
   validation {
     condition = var.datadog_apm_instrumentation == null || contains(
       [
@@ -163,7 +164,8 @@ variable "datadog_apm_instrumentation" {
         "php",
         "ruby",
       ],
-    var.datadog_apm_instrumentation.language)
+      var.datadog_apm_instrumentation.language,
+    )
     error_message = "Invalid language. Valid options are: 'java', 'python', 'js', 'dotnet', 'php', and 'ruby'."
   }
   default = null

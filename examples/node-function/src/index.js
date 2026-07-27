@@ -1,6 +1,6 @@
-const tracer = require('dd-trace').init({
-  logInjection: true,
-});
+// const tracer = require('dd-trace').init({
+//   logInjection: true,
+// });
 
 const functions = require('@google-cloud/functions-framework');
 const rawLogPath = process.env.DD_SERVERLESS_LOG_PATH;

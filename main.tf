@@ -9,8 +9,18 @@ locals {
   tracer_volume_mount_path = "/datadog-lib"
   apm_enabled              = var.datadog_apm_instrumentation != null
   injection_mode_tag       = "_dd.injection.mode:serverless-single-lang"
+  # Matches $REPO in dd-lib-*-init copy-lib.sh (marker: $TARGET_PATH/.$REPO-copy-finished).
+  tracer_repo_name = local.apm_enabled ? ({
+    java   = "dd-trace-java"
+    js     = "dd-trace-js"
+    python = "dd-trace-py"
+    dotnet = "dd-trace-dotnet"
+    ruby   = "dd-trace-rb"
+    php    = "dd-trace-php"
+  })[var.datadog_apm_instrumentation.language] : null
+  tracer_copy_finished_marker = local.apm_enabled ? "${local.tracer_volume_mount_path}/.${local.tracer_repo_name}-copy-finished" : null
   # Native env vars for Single-Language SSI (mirrors admission-controller lib injection).
-  apm_language_env_vars = try(lookup({
+  apm_env_map = {
     java = {
       JAVA_TOOL_OPTIONS = " -javaagent:${local.tracer_volume_mount_path}/dd-java-agent.jar -XX:OnError=${local.tracer_volume_mount_path}/java/continuousprofiler/tmp/dd_crash_uploader.sh -XX:ErrorFile=${local.tracer_volume_mount_path}/java/continuousprofiler/tmp/hs_err_pid_%p.log"
     }
@@ -34,8 +44,17 @@ locals {
     php = {
       PHP_INI_SCAN_DIR = "${local.tracer_volume_mount_path}/linux-gnu/loader"
     }
-  }, var.datadog_apm_instrumentation.language, {}), {})
-  module_controlled_env_vars = [
+  }
+
+  apm_language_env_vars = local.apm_enabled ? lookup(
+    local.apm_env_map,
+    var.datadog_apm_instrumentation.language,
+    {},
+  ) : {}
+
+  # Base env vars the module always owns
+  module_controlled_env_vars = concat(
+    [
     "DD_API_KEY",
     "DD_SITE",
     "DD_SERVICE",
@@ -47,19 +66,13 @@ locals {
     "DD_SERVERLESS_LOG_PATH",
     "FUNCTION_TARGET",
     "DD_LOGS_INJECTION", # this is not an env var needed on the sidecar anyways
-    "DD_TRACE_ENABLED",
-    "JAVA_TOOL_OPTIONS",
-    "NODE_OPTIONS",
-    "PYTHONPATH",
-    "CORECLR_ENABLE_PROFILING",
-    "CORECLR_PROFILER",
-    "CORECLR_PROFILER_PATH",
-    "DD_DOTNET_TRACER_HOME",
-    "DD_TRACE_LOG_DIRECTORY",
-    "LD_PRELOAD",
-    "RUBYOPT",
-    "PHP_INI_SCAN_DIR",
-  ]
+    ],
+    # these vars are appended only when datadog_apm_instrumentation is enabled
+    local.apm_enabled ? concat(
+      ["DD_TRACE_ENABLED"],
+      keys(local.apm_language_env_vars),
+    ) : [],
+  )
 
 
   ### Variables to handle input checks and infrastructure overrides (volume, volume_mount, sidecar container)
@@ -134,6 +147,8 @@ locals {
     image   = "gcr.io/datadoghq/dd-lib-${var.datadog_apm_instrumentation.language}-init:${var.datadog_apm_instrumentation.tracer_version}"
     name    = "tracer-sidecar-${var.datadog_apm_instrumentation.language}"
     command = ["sh", "-c"]
+    # Copy tracer libs into the shared volume, then idle. 
+    # App containers wait on the copy-finished marker
     args = [
       "/datadog-init/copy-lib.sh ${local.tracer_volume_mount_path} && while true; do :; done",
     ]
@@ -179,6 +194,17 @@ check "function_target_is_provided" {
   }
 }
 
+check "ssi_requires_container_command_or_args" {
+  assert {
+    # No-op when datadog_apm_instrumentation is null (SSI disabled).
+    condition = !local.apm_enabled || alltrue([
+      for c in local.containers_without_sidecar :
+      length(concat(coalesce(c.command, []), coalesce(c.args, []))) > 0
+    ])
+    error_message = "When datadog_apm_instrumentation is set, each template.containers entry must set command and/or args so the module can wrap startup to wait for the tracer copy-finished marker before loading the injected tracer."
+  }
+}
+
 # Implementation
 locals {
   labels = merge(
@@ -191,7 +217,9 @@ locals {
   # Update the environments on the containers
   template_containers = concat(
     [for container in local.containers_without_sidecar :
-      merge(container, {
+      merge(
+        container,
+        {
         env = concat(
           # First, preserve user-defined env vars with value_source
           [for env in coalesce(container.env, []) : { name = env.name, value = env.value, value_source = env.value_source }
@@ -218,13 +246,21 @@ locals {
           }] : [],
           [for vm in coalesce(container.volume_mounts, []) : vm if contains(local.filtered_volume_mounts, vm)],
         )
-        # When APM SSI is enabled, app containers must start after the tracer copy sidecar
-        # so Cloud Run's depends_on ordering starts the idling copy sidecar first.
-        depends_on = concat(
-          coalesce(container.depends_on, []),
-          local.tracer_sidecar != null ? [local.tracer_sidecar.name] : [],
+        },
+        # When SSI is enabled, wrap startup to wait for copy-lib's marker before exec'ing
+        # the container command/args
+        local.apm_enabled ? {
+          command = ["sh", "-c"]
+          args = concat(
+            [
+              "while [ ! -f '${local.tracer_copy_finished_marker}' ]; do sleep 0.1 2>/dev/null || :; done; exec \"$@\"",
+              "dd-ssi-wait",
+            ],
+            coalesce(container.command, []),
+            coalesce(container.args, []),
         )
-    })],
+        } : {},
+    )],
     # We add the sidecar at the end due to an issue where cloud sql mounts are always
     # assigned to the first container (assuming it is the main app), so we should preserve
     # that ordering here to ensure that cloud sql mounts aren't added to the sidecar

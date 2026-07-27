@@ -42,7 +42,7 @@ PROJECT_ID=${PROJECT_ID:-${TF_VAR_project:?required but not set (PROJECT_ID or T
 GCP_PROJECT_NAME=${GCP_PROJECT_NAME:?required but not set}
 DD_SERVICE=${DD_SERVICE:?required but not set}
 REPO_NAME=${REPO_NAME:?required but not set}
-REGION=${REGION:-${TF_VAR_region:-us-central1}}
+REGION=${REGION:-us-central1}
 IMAGE_NAME="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${GCP_PROJECT_NAME}:latest"
 
 # Build
@@ -60,4 +60,4 @@ docker push ${IMAGE_NAME}
 echo -e "\n====== Deploying to Cloud Run using terraform ======"
 cd "../"
 terraform init
-terraform apply -auto-approve -var='region=us-central1'
+terraform apply -auto-approve -var="image=${IMAGE_NAME}"
