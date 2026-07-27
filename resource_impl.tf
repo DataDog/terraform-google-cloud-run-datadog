@@ -19,6 +19,7 @@ resource "google_cloud_run_v2_service" "this" {
   location             = var.location
   name                 = var.name
   project              = try(var.project, null)
+  tags                 = try(var.tags, null)
   dynamic "binary_authorization" {
     for_each = try(var.binary_authorization, null) != null ? [true] : []
     content {
