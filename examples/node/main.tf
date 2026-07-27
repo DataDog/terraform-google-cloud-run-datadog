@@ -13,7 +13,7 @@ module "datadog-cloud-run-v2-node" {
   deletion_protection = false
 
   datadog_api_key             = var.datadog_api_key
-  datadog_apm_instrumentation = var.datadog_apm_instrumentation
+  datadog_apm_instrumentation = { language = "js" }
   datadog_site                = "datadoghq.com"
   datadog_service             = "cloud-run-tf-node-example"
   datadog_version             = "1_0_0"

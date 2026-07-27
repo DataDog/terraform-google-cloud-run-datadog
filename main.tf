@@ -204,7 +204,7 @@ locals {
             # user provided env vars (without value_source) converted to map
             { for env in coalesce(container.env, []) : env.name => env.value if env.value_source == null },
             # always override user configuration with these env vars
-            # { DD_SERVERLESS_LOG_PATH = var.datadog_logging_path },
+            { DD_SERVERLESS_LOG_PATH = var.datadog_logging_path },
             # Single-Language SSI native env vars (language-specific tracer loading)
             local.apm_language_env_vars,
           ) : { name = name, value = value, value_source = null }]

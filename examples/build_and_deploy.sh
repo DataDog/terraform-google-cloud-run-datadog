@@ -38,11 +38,11 @@ fi
 echo "Building and deploying $LANGUAGE application from $PROJECT_PATH"
 
 # Configuration
-PROJECT_ID=${PROJECT_ID:?required but not set}
+PROJECT_ID=${PROJECT_ID:-${TF_VAR_project:?required but not set (PROJECT_ID or TF_VAR_project)}}
 GCP_PROJECT_NAME=${GCP_PROJECT_NAME:?required but not set}
 DD_SERVICE=${DD_SERVICE:?required but not set}
 REPO_NAME=${REPO_NAME:?required but not set}
-REGION=${REGION:-us}
+REGION=${REGION:-${TF_VAR_region:-us-central1}}
 IMAGE_NAME="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${GCP_PROJECT_NAME}:latest"
 
 # Build
@@ -60,4 +60,4 @@ docker push ${IMAGE_NAME}
 echo -e "\n====== Deploying to Cloud Run using terraform ======"
 cd "../"
 terraform init
-terraform apply -auto-approve -var='datadog_apm_instrumentation={language="js"}' -var='project=datadog-serverless-gcp-dev' -var='region=us-central1'
+terraform apply -auto-approve -var='region=us-central1'
