@@ -4,6 +4,37 @@
 locals {
   module_version  = "2_2_0"
   datadog_service = var.datadog_service != null ? var.datadog_service : var.name
+  # Tracer copy volume mount path used by dd-lib-*-init and language env vars.
+  tracer_volume_name       = "datadog-tracer"
+  tracer_volume_mount_path = "/datadog-lib"
+  apm_enabled              = var.datadog_apm_instrumentation != null
+  injection_mode_tag       = "_dd.injection.mode:serverless-single-lang"
+  # Native env vars for Single-Language SSI (mirrors admission-controller lib injection).
+  apm_language_env_vars = try(lookup({
+    java = {
+      JAVA_TOOL_OPTIONS = " -javaagent:${local.tracer_volume_mount_path}/dd-java-agent.jar -XX:OnError=${local.tracer_volume_mount_path}/java/continuousprofiler/tmp/dd_crash_uploader.sh -XX:ErrorFile=${local.tracer_volume_mount_path}/java/continuousprofiler/tmp/hs_err_pid_%p.log"
+    }
+    js = {
+      NODE_OPTIONS = " --require=${local.tracer_volume_mount_path}/node_modules/dd-trace/init"
+    }
+    python = {
+      PYTHONPATH = "${local.tracer_volume_mount_path}/"
+    }
+    dotnet = {
+      CORECLR_ENABLE_PROFILING = "1"
+      CORECLR_PROFILER         = "{846F5F1C-F9AE-4B07-969E-05C26BC060D8}"
+      CORECLR_PROFILER_PATH    = "${local.tracer_volume_mount_path}/Datadog.Trace.ClrProfiler.Native.so"
+      DD_DOTNET_TRACER_HOME    = local.tracer_volume_mount_path
+      DD_TRACE_LOG_DIRECTORY   = "${local.tracer_volume_mount_path}/logs"
+      LD_PRELOAD               = "${local.tracer_volume_mount_path}/continuousprofiler/Datadog.Linux.ApiWrapper.x64.so"
+    }
+    ruby = {
+      RUBYOPT = " -r${local.tracer_volume_mount_path}/auto_inject"
+    }
+    php = {
+      PHP_INI_SCAN_DIR = "${local.tracer_volume_mount_path}/linux-gnu/loader"
+    }
+  }, var.datadog_apm_instrumentation.language, {}), {})
   module_controlled_env_vars = [
     "DD_API_KEY",
     "DD_SITE",
@@ -16,6 +47,18 @@ locals {
     "DD_SERVERLESS_LOG_PATH",
     "FUNCTION_TARGET",
     "DD_LOGS_INJECTION", # this is not an env var needed on the sidecar anyways
+    "DD_TRACE_ENABLED",
+    "JAVA_TOOL_OPTIONS",
+    "NODE_OPTIONS",
+    "PYTHONPATH",
+    "CORECLR_ENABLE_PROFILING",
+    "CORECLR_PROFILER",
+    "CORECLR_PROFILER_PATH",
+    "DD_DOTNET_TRACER_HOME",
+    "DD_TRACE_LOG_DIRECTORY",
+    "LD_PRELOAD",
+    "RUBYOPT",
+    "PHP_INI_SCAN_DIR",
   ]
 
 
@@ -52,11 +95,17 @@ locals {
     DD_SERVICE     = local.datadog_service
     DD_HEALTH_PORT = tostring(var.datadog_sidecar.health_port)
   }
+  # When SSI is enabled, always include the injection-mode tag (append to user tags if any).
+  datadog_tags_effective = local.apm_enabled ? concat(
+    coalesce(var.datadog_tags, []),
+    [local.injection_mode_tag],
+  ) : var.datadog_tags
   shared_env_vars = merge(
     { DD_SERVICE = local.datadog_service },
     var.datadog_version != null ? { DD_VERSION = var.datadog_version } : {},
     var.datadog_env != null ? { DD_ENV = var.datadog_env } : {},
-    var.datadog_tags != null ? { DD_TAGS = join(",", var.datadog_tags) } : {},
+    local.datadog_tags_effective != null ? { DD_TAGS = join(",", local.datadog_tags_effective) } : {},
+    local.apm_enabled ? { DD_TRACE_ENABLED = "true" } : {},
   )
   all_module_sidecar_env_vars = merge(
     local.shared_env_vars,
@@ -81,6 +130,18 @@ locals {
       startup_probe = merge(var.datadog_sidecar.startup_probe, { tcp_socket = { port = var.datadog_sidecar.health_port } })
     },
   )
+  tracer_sidecar = local.apm_enabled ? {
+    image   = "gcr.io/datadoghq/dd-lib-${var.datadog_apm_instrumentation.language}-init:${var.datadog_apm_instrumentation.tracer_version}"
+    name    = "tracer-sidecar-${var.datadog_apm_instrumentation.language}"
+    command = ["sh", "-c"]
+    args = [
+      "/datadog-init/copy-lib.sh ${local.tracer_volume_mount_path} && while true; do :; done",
+    ]
+    volume_mounts = [{
+      name       = local.tracer_volume_name
+      mount_path = local.tracer_volume_mount_path
+    }]
+  } : null
 }
 
 check "logging_volume_already_exists" {
@@ -143,29 +204,54 @@ locals {
             # user provided env vars (without value_source) converted to map
             { for env in coalesce(container.env, []) : env.name => env.value if env.value_source == null },
             # always override user configuration with these env vars
-            { DD_SERVERLESS_LOG_PATH = var.datadog_logging_path }
+            # { DD_SERVERLESS_LOG_PATH = var.datadog_logging_path },
+            # Single-Language SSI native env vars (language-specific tracer loading)
+            local.apm_language_env_vars,
           ) : { name = name, value = value, value_source = null }]
         )
         # User-check 3: check for each provided container the volume mounts and if logging is enabled and the shared volume is an input, do not mount it again
         volume_mounts = concat(
           var.datadog_enable_logging ? [var.datadog_shared_volume] : [],
+          local.apm_enabled ? [{
+            name       = local.tracer_volume_name
+            mount_path = local.tracer_volume_mount_path
+          }] : [],
           [for vm in coalesce(container.volume_mounts, []) : vm if contains(local.filtered_volume_mounts, vm)],
+        )
+        # When APM SSI is enabled, app containers must start after the tracer copy sidecar
+        # so Cloud Run's depends_on ordering starts the idling copy sidecar first.
+        depends_on = concat(
+          coalesce(container.depends_on, []),
+          local.tracer_sidecar != null ? [local.tracer_sidecar.name] : [],
         )
     })],
     # We add the sidecar at the end due to an issue where cloud sql mounts are always
     # assigned to the first container (assuming it is the main app), so we should preserve
     # that ordering here to ensure that cloud sql mounts aren't added to the sidecar
-    [local.sidecar_container],
+    concat(
+      local.tracer_sidecar != null ? [local.tracer_sidecar] : [],
+      [local.sidecar_container],
+    ),
   )
 
-  # If dd_enable_logging is true, add the shared volume to the template volumes
-  template_volumes = concat(local.volumes_without_shared_volume, var.datadog_enable_logging ? [{
+  # If dd_enable_logging is true, or datadog_apm_instrumentation is enabled add the shared volumes to the template volumes
+  tracer_volume = local.apm_enabled ? [{
+    name = local.tracer_volume_name
+    empty_dir = {
+      medium     = "MEMORY"
+      size_limit = "100Mi"
+    }
+  }] : []
+
+  logger_volume = var.datadog_enable_logging ? [{
     name = var.datadog_shared_volume.name
     empty_dir = {
       medium     = "MEMORY"
       size_limit = var.datadog_shared_volume.size_limit
     }
-  }] : [])
+  }] : []
+
+  template_volumes = concat(local.volumes_without_shared_volume, local.tracer_volume, local.logger_volume)
 }
 
 

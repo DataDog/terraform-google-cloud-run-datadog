@@ -38,3 +38,12 @@ variable "datadog_api_key" {
   description = "The api key for datadog"
   nullable    = false
 }
+
+variable "datadog_apm_instrumentation" {
+  type = object({
+    language       = string
+    tracer_version = optional(string, "latest")
+  })
+  description = "APM single-language SSI config. Set language to \"js\" for Node."
+  default     = null
+}

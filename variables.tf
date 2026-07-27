@@ -144,6 +144,27 @@ Datadog sidecar configuration. Nested attributes include:
 - resources - Resources like for any cloud run container.
 - startup_probe - Startup probe settings only for failure_threshold, initial_delay_seconds, period_seconds, timeout_seconds.
 - health_port - Health port to start the startup probe.
-- env_vars - List of environment variables with name and value fieldsfor customizing Datadog agent configuration, if any.
+- env_vars - List of environment variables with name and value fields for customizing Datadog agent configuration, if any.
 DESCRIPTION
+}
+
+variable "datadog_apm_instrumentation" {
+  type = object({
+    language       = string
+    tracer_version = optional(string, "latest")
+  })
+  validation {
+    condition = var.datadog_apm_instrumentation == null || contains(
+      [
+        "java",
+        "python",
+        "js",
+        "dotnet",
+        "php",
+        "ruby",
+      ],
+    var.datadog_apm_instrumentation.language)
+    error_message = "Invalid language. Valid options are: 'java', 'python', 'js', 'dotnet', 'php', and 'ruby'."
+  }
+  default = null
 }

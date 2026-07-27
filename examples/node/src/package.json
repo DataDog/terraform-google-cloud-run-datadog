@@ -1,5 +1,5 @@
 {
-  "main": "main.js",
+  "main": "index.js",
   "dependencies": {
     "dd-trace": "^5.115.0",
     "express": "^5.2.1",
