@@ -12,15 +12,16 @@ module "datadog-cloud-run-v2-python" {
   location            = var.region
   deletion_protection = false
 
-  datadog_api_key        = var.datadog_api_key
-  datadog_site           = "datadoghq.com"
-  datadog_service        = "cloud-run-tf-python-example"
-  datadog_version        = "1_0_0"
-  datadog_tags           = ["test:tag-example", "foo:tag-example-2"]
-  datadog_env            = "serverless"
-  datadog_enable_logging = true
-  datadog_log_level      = "debug"
-  datadog_logging_path   = "/shared-volume/logs/*.log"
+  datadog_api_key             = var.datadog_api_key
+  datadog_apm_instrumentation = var.datadog_apm_instrumentation ? { language = "python" } : null
+  datadog_site                = "datadoghq.com"
+  datadog_service             = "cloud-run-tf-python-example"
+  datadog_version             = "1_0_0"
+  datadog_tags                = ["test:tag-example", "foo:tag-example-2"]
+  datadog_env                 = "serverless"
+  datadog_enable_logging      = true
+  datadog_log_level           = "debug"
+  datadog_logging_path        = "/shared-volume/logs/*.log"
   datadog_shared_volume = {
     name       = "dd-shared-volume"
     mount_path = "/shared-volume"
@@ -56,8 +57,10 @@ module "datadog-cloud-run-v2-python" {
 
     containers = [
       {
-        name  = "cloudrun-tf-python-example"
-        image = var.image
+        name    = "cloudrun-tf-python-example"
+        image   = var.image
+        command = ["python"]
+        args    = ["app.py"]
         resources = {
           limits = {
             cpu    = "1"
@@ -77,7 +80,7 @@ module "datadog-cloud-run-v2-python" {
     ]
     scaling = {
       min_instance_count = 1
-      max_instance_count = 1
+      max_instance_count = 10
     }
   }
 
@@ -90,7 +93,7 @@ module "datadog-cloud-run-v2-python" {
 
   scaling = {
     min_instance_count = 1
-
+    max_instance_count = 10
   }
 
 }

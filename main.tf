@@ -28,7 +28,8 @@ locals {
       NODE_OPTIONS = " --require=${local.tracer_volume_mount_path}/node_modules/dd-trace/init"
     }
     python = {
-      PYTHONPATH = "${local.tracer_volume_mount_path}/"
+      PYTHONPATH                                   = "${local.tracer_volume_mount_path}/"
+      DD_INJECT_EXPERIMENTAL_OVERRIDE_USER_DDTRACE = "true" // q: this might be dangerous. are there alternatives?
     }
     dotnet = {
       CORECLR_ENABLE_PROFILING = "1"

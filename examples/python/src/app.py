@@ -2,6 +2,11 @@
 # This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2025 Datadog, Inc.
 
 import os
+
+# Manual APM fallback when SSI (datadog_apm_instrumentation) is disabled.
+if "/datadog-lib" not in (os.environ.get("PYTHONPATH") or ""):
+    import ddtrace.auto  # noqa: F401
+
 import logging
 import datadog
 from ddtrace import tracer
