@@ -13,15 +13,16 @@ module "datadog-cloud-run-v2-node" {
   deletion_protection = false
   client              = "terraform"
 
-  datadog_api_key        = var.datadog_api_key
-  datadog_site           = "datadoghq.com"
-  datadog_service        = var.name
-  datadog_version        = "1_0_0"
-  datadog_tags           = ["test:tag-example", "foo:tag-example-2"]
-  datadog_env            = "serverless"
-  datadog_enable_logging = true
-  datadog_log_level      = "debug"
-  datadog_logging_path   = "/shared-volume/logs/*.log"
+  datadog_api_key             = var.datadog_api_key
+  datadog_apm_instrumentation = var.datadog_apm_instrumentation ? { language = "js" } : null
+  datadog_site                = "datadoghq.com"
+  datadog_service             = var.name
+  datadog_version             = "1_0_0"
+  datadog_tags                = ["test:tag-example", "foo:tag-example-2"]
+  datadog_env                 = "serverless"
+  datadog_enable_logging      = true
+  datadog_log_level           = "debug"
+  datadog_logging_path        = "/shared-volume/logs/*.log"
   datadog_shared_volume = {
     name       = "dd-shared-volume"
     mount_path = "/shared-volume"
@@ -56,6 +57,10 @@ module "datadog-cloud-run-v2-node" {
       name           = var.name
       image          = var.image
       base_image_uri = "us-central1-docker.pkg.dev/serverless-runtimes/google-22-full/runtimes/nodejs22"
+      # Required when datadog_apm_instrumentation is set: module wraps these to
+      # wait for the tracer copy-finished marker before starting the app.
+      command = ["npx"]
+      args    = ["functions-framework", "--target=helloHttp"]
       ports = {
         container_port = 8080
       }
@@ -72,7 +77,7 @@ module "datadog-cloud-run-v2-node" {
 
     scaling = {
       min_instance_count = 1
-      max_instance_count = 1
+      max_instance_count = 10
     }
   }
 
@@ -83,9 +88,10 @@ module "datadog-cloud-run-v2-node" {
     }
   ]
 
+  # Service-level max must be <= 10 when SSI uses a 10Gi DISK emptyDir (ephemeral-disk quota).
   scaling = {
     min_instance_count = 1
-
+    max_instance_count = 10
   }
 }
 

@@ -1,7 +1,7 @@
 # Unless explicitly stated otherwise all files in this repository are licensed under the Apache-2.0 License.
 # This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2025 Datadog, Inc.
 
-FROM php:8.4-apache
+FROM php:8.4-apache AS runtime
 
 WORKDIR /var/www/html
 
@@ -15,10 +15,6 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 # Create Laravel project
 RUN composer create-project laravel/laravel . --no-dev
-
-# Install Datadog tracer
-RUN curl -LO https://github.com/DataDog/dd-trace-php/releases/latest/download/datadog-setup.php \
-    && php datadog-setup.php --php-bin=all
 
 ENV PORT=8080
 EXPOSE 8080
@@ -40,3 +36,13 @@ RUN chown -R www-data:www-data /var/www/html \
 ENV LOG_CHANNEL=stderr
 
 CMD ["apache2-foreground"]
+
+# SSI on: stop here; the module sets PHP_INI_SCAN_DIR for /datadog-lib.
+FROM runtime AS ssi
+
+# SSI off (default): install the PHP tracer extension.
+FROM runtime AS manual
+RUN curl -LO https://github.com/DataDog/dd-trace-php/releases/latest/download/datadog-setup.php \
+    && php datadog-setup.php --php-bin=all
+
+FROM manual

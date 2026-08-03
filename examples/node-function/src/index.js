@@ -1,6 +1,10 @@
-// const tracer = require('dd-trace').init({
-//   logInjection: true,
-// });
+// Unless explicitly stated otherwise all files in this repository are licensed under the Apache-2.0 License.
+// This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2025 Datadog, Inc.
+
+// Manual APM fallback when SSI (datadog_apm_instrumentation) is disabled.
+if (!(process.env.NODE_OPTIONS || '').includes('dd-trace')) {
+  require('dd-trace').init({ logInjection: true });
+}
 
 const functions = require('@google-cloud/functions-framework');
 const rawLogPath = process.env.DD_SERVERLESS_LOG_PATH;

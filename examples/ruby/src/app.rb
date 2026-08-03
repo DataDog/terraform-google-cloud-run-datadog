@@ -1,9 +1,12 @@
 # Unless explicitly stated otherwise all files in this repository are licensed under the Apache-2.0 License.
 # This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2025 Datadog, Inc.
 
+# Manual APM fallback when SSI (datadog_apm_instrumentation) is disabled.
+# When SSI is enabled, RUBYOPT already loads auto_inject from /datadog-lib before this file runs.
+require 'datadog/auto_instrument' unless (ENV['RUBYOPT'] || '').include?('datadog-lib')
+
 require 'sinatra'
 require 'logger'
-require 'datadog/auto_instrument'
 require 'fileutils'
 
 LOG_FILE = (ENV['DD_SERVERLESS_LOG_PATH']&.gsub('*.log', 'app.log')) || '/shared-volume/logs/app.log'

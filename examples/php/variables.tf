@@ -20,7 +20,7 @@ variable "region" {
 variable "name" {
   type        = string
   description = "The name of the Cloud Run service"
-  default     = "cloud-run-tf-example"
+  default     = "cloud-run-tf-example-php"
   nullable    = false
 }
 
@@ -36,5 +36,11 @@ variable "image" {
 variable "datadog_api_key" {
   type        = string
   description = "The api key for datadog"
+  nullable    = false
+}
+
+variable "datadog_apm_instrumentation" {
+  type        = bool
+  description = "Whether to enable Datadog APM auto-instrumentation for PHP. enter 'true' or 'false'"
   nullable    = false
 }
