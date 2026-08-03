@@ -8,6 +8,7 @@ locals {
   tracer_volume_name       = "datadog-tracer"
   tracer_volume_mount_path = "/datadog-lib"
   apm_enabled              = var.datadog_apm_instrumentation != null
+  using_disk_medium        = local.apm_enabled && var.datadog_apm_instrumentation.volume_medium == "DISK"
   injection_mode_tag       = "_dd.injection.mode:serverless-single-lang"
   # Matches $REPO in dd-lib-*-init copy-lib.sh (marker: $TARGET_PATH/.$REPO-copy-finished).
   tracer_repo_name = local.apm_enabled ? ({
@@ -275,11 +276,9 @@ locals {
   tracer_volume = local.apm_enabled ? [{
     name = local.tracer_volume_name
     empty_dir = {
-      # Disk-backed emptyDir needs launch_stage BETA (see local.launch_stage).
-      # and least 10Gi size_limit.; ephemeral-disk quota is
-      # roughly size_limit * scaling.max_instance_count (see local.scaling).
-      medium     = "DISK"
-      size_limit = "10Gi"
+      medium = var.datadog_apm_instrumentation.volume_medium
+      # Disk-backed emptyDir requires at least 10Gi size_limit
+      size_limit = local.using_disk_medium ? "10Gi" : "500Mi"
     }
   }] : []
 
@@ -295,13 +294,13 @@ locals {
 
   # emptyDir medium=DISK is a Cloud Run BETA feature; force at least BETA when SSI is on.
   # Preserve ALPHA if the caller already opted into it.
-  launch_stage = local.apm_enabled ? (
+  launch_stage = local.using_disk_medium ? (
     var.launch_stage == "ALPHA" ? "ALPHA" : "BETA"
   ) : var.launch_stage
 
   # With a 10Gi DISK emptyDir, default project ephemeral-disk quota (~100Gi) allows
   # at most 10 instances. Cap (or default) max_instance_count accordingly when SSI is on.
-  scaling = local.apm_enabled ? {
+  scaling = local.using_disk_medium ? {
     scaling_mode          = try(var.scaling.scaling_mode, null)
     min_instance_count    = try(var.scaling.min_instance_count, null)
     manual_instance_count = try(var.scaling.manual_instance_count, null)

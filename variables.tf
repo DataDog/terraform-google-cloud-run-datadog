@@ -152,6 +152,7 @@ variable "datadog_apm_instrumentation" {
   type = object({
     language       = string
     tracer_version = optional(string, "latest")
+    volume_medium  = optional(string, "MEMORY")
   })
   description = "Enables auto-instrumentation via a tracer sidecar"
   validation {
@@ -167,6 +168,14 @@ variable "datadog_apm_instrumentation" {
       var.datadog_apm_instrumentation.language,
     )
     error_message = "Invalid language. Valid options are: 'java', 'python', 'js', 'dotnet', 'php', and 'ruby'."
+  }
+
+  validation {
+    condition = var.datadog_apm_instrumentation == null || contains(
+      ["DISK", "MEMORY"],
+      var.datadog_apm_instrumentation.volume_medium,
+    )
+    error_message = "Invalid volume_medium. Valid options are: 'DISK' and 'MEMORY'."
   }
   default = null
 }
