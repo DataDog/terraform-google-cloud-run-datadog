@@ -153,8 +153,20 @@ variable "datadog_apm_instrumentation" {
     language       = string
     tracer_version = optional(string, "latest")
     volume_medium  = optional(string, "MEMORY")
+    command        = optional(list(string))
+    args           = optional(list(string))
   })
-  description = "Enables auto-instrumentation via a tracer sidecar"
+  description = <<-DESCRIPTION
+Enables auto-instrumentation via a tracer sidecar.
+
+- language - Tracer language. One of 'java', 'python', 'js', 'dotnet', 'php', 'ruby'.
+- tracer_version - Tag of the dd-lib-<language>-init image to copy the tracer from.
+- volume_medium - Backing medium for the tracer volume. One of 'MEMORY' or 'DISK'.
+- command - Workload startup command. The module wraps it to wait for the tracer
+  copy-finished marker before exec'ing it, so it cannot be read from the image.
+  Falls back to the container's own `command`/`args`, then to a per-language default.
+- args - Workload startup arguments, resolved together with `command`.
+DESCRIPTION
   validation {
     condition = var.datadog_apm_instrumentation == null || contains(
       [

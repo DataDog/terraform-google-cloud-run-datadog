@@ -25,6 +25,18 @@ variable "workload_image" {
   nullable    = false
 }
 
+variable "workload_command" {
+  type        = list(string)
+  description = "Optional container command for the workload. Required when datadog_apm_instrumentation is set (SSI wraps command/args)."
+  default     = null
+}
+
+variable "workload_args" {
+  type        = list(string)
+  description = "Optional container args for the workload. Required when datadog_apm_instrumentation is set (SSI wraps command/args)."
+  default     = null
+}
+
 variable "sidecar_image" {
   type        = string
   description = "Datadog serverless-init sidecar image, pinned by digest so failures blame the module, not upstream."
@@ -60,6 +72,33 @@ variable "datadog_version" {
   type        = string
   description = "Unified Service Tagging version tag asserted on ingested telemetry."
   nullable    = false
+}
+
+variable "datadog_apm_instrumentation" {
+  type = object({
+    language       = string
+    tracer_version = optional(string, "latest")
+    volume_medium  = optional(string, "MEMORY")
+  })
+  description = "When set, enables Single-Language SSI (tracer sidecar + language env injection)."
+  default     = null
+}
+
+variable "build_config" {
+  type = object({
+    function_target          = string
+    image_uri                = optional(string)
+    base_image               = optional(string)
+    enable_automatic_updates = optional(bool)
+  })
+  description = "When set, configures Cloud Run Functions build_config (used by the node-function example)."
+  default     = null
+}
+
+variable "base_image_uri" {
+  type        = string
+  description = "Optional base_image_uri for the workload container (Cloud Run Functions)."
+  default     = null
 }
 
 variable "run_id" {

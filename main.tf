@@ -44,7 +44,8 @@ locals {
       RUBYOPT = " -r${local.tracer_volume_mount_path}/auto_inject"
     }
     php = {
-      PHP_INI_SCAN_DIR = "${local.tracer_volume_mount_path}/linux-gnu/loader"
+      PHP_INI_SCAN_DIR       = "${local.tracer_volume_mount_path}/linux-gnu/loader"
+      DD_LOADER_PACKAGE_PATH = local.tracer_volume_mount_path
     }
   }
 
@@ -53,6 +54,38 @@ locals {
     var.datadog_apm_instrumentation.language,
     {},
   ) : {}
+
+  # Startup command the SSI wait wrapper execs. These mirror the
+  # conventional entrypoint for each runtime.
+  apm_default_startup = {
+    java   = { command = ["java", "-jar"], args = ["app.jar"] }
+    js     = { command = ["node"], args = ["index.js"] }
+    python = { command = ["python"], args = ["app.py"] }
+    dotnet = { command = ["dotnet"], args = ["dotnet.dll"] }
+    ruby   = { command = ["bundle", "exec", "ruby"], args = ["app.rb"] }
+    php    = { command = ["apache2-foreground"], args = [] }
+  }
+
+  # Resolved as a pair so command and args never come from different sources.
+  apm_startup_override = local.apm_enabled && try(
+    var.datadog_apm_instrumentation.command != null || var.datadog_apm_instrumentation.args != null,
+    false,
+    ) ? {
+    command = coalesce(var.datadog_apm_instrumentation.command, [])
+    args    = coalesce(var.datadog_apm_instrumentation.args, [])
+  } : null
+
+  apm_container_startup = [
+    for container in local.containers_without_sidecar : (
+      !local.apm_enabled ? { command = [], args = [] } : (
+        local.apm_startup_override != null ? local.apm_startup_override : (
+          length(concat(coalesce(container.command, []), coalesce(container.args, []))) > 0
+          ? { command = coalesce(container.command, []), args = coalesce(container.args, []) }
+          : lookup(local.apm_default_startup, var.datadog_apm_instrumentation.language, { command = [], args = [] })
+        )
+      )
+    )
+  ]
 
   # Base env vars the module always owns
   module_controlled_env_vars = concat(
@@ -196,14 +229,14 @@ check "function_target_is_provided" {
   }
 }
 
-check "ssi_requires_container_command_or_args" {
+check "ssi_requires_resolvable_startup_command" {
   assert {
     # No-op when datadog_apm_instrumentation is null (SSI disabled).
     condition = !local.apm_enabled || alltrue([
-      for c in local.containers_without_sidecar :
-      length(concat(coalesce(c.command, []), coalesce(c.args, []))) > 0
+      for startup in local.apm_container_startup :
+      length(concat(startup.command, startup.args)) > 0
     ])
-    error_message = "When datadog_apm_instrumentation is set, each template.containers entry must set command and/or args so the module can wrap startup to wait for the tracer copy-finished marker before loading the injected tracer."
+    error_message = "When datadog_apm_instrumentation is set, the module must know how to start the workload so it can wrap startup to wait for the tracer copy-finished marker. Set command and/or args on datadog_apm_instrumentation, or on each template.containers entry."
   }
 }
 
@@ -218,7 +251,7 @@ locals {
 
   # Update the environments on the containers
   template_containers = concat(
-    [for container in local.containers_without_sidecar :
+    [for idx, container in local.containers_without_sidecar :
       merge(
         container,
         {
@@ -258,8 +291,8 @@ locals {
               "while [ ! -f '${local.tracer_copy_finished_marker}' ]; do sleep 0.1 2>/dev/null || :; done; exec \"$@\"",
               "dd-ssi-wait",
             ],
-            coalesce(container.command, []),
-            coalesce(container.args, []),
+            local.apm_container_startup[idx].command,
+            local.apm_container_startup[idx].args,
           )
         } : {},
     )],

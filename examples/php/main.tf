@@ -59,9 +59,6 @@ module "datadog-cloud-run-v2-php" {
       {
         name  = "cloudrun-tf-php-example"
         image = var.image
-        # Required when datadog_apm_instrumentation is set: module wraps these to
-        # wait for the tracer copy-finished marker before starting the app.
-        command = ["apache2-foreground"]
         resources = {
           limits = {
             cpu    = "1"

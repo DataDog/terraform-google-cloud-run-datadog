@@ -57,10 +57,8 @@ module "datadog-cloud-run-v2-dotnet" {
 
     containers = [
       {
-        name    = "cloudrun-tf-dotnet-example"
-        image   = var.image
-        command = ["dotnet"]
-        args    = ["dotnet.dll"]
+        name  = "cloudrun-tf-dotnet-example"
+        image = var.image
         resources = {
           limits = {
             cpu    = "1"

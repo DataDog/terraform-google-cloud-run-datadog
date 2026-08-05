@@ -59,10 +59,6 @@ module "datadog-cloud-run-v2-ruby" {
       {
         name  = "cloudrun-tf-ruby-example"
         image = var.image
-        # Required when datadog_apm_instrumentation is set: module wraps these to
-        # wait for the tracer copy-finished marker before starting the app.
-        command = ["bundle", "exec", "ruby"]
-        args    = ["app.rb"]
         resources = {
           limits = {
             cpu    = "1"

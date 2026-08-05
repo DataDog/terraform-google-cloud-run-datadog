@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	run "cloud.google.com/go/run/apiv2"
 	runpb "cloud.google.com/go/run/apiv2/runpb"
@@ -18,8 +19,12 @@ import (
 
 // Names the module assigns to the components it injects.
 const (
-	sidecarName      = "datadog-sidecar"
-	sharedVolumeName = "shared-volume"
+	sidecarName         = "datadog-sidecar"
+	sharedVolumeName    = "shared-volume"
+	tracerVolumeName    = "datadog-tracer"
+	tracerVolumePath    = "/datadog-lib"
+	injectionModeTag    = "_dd.injection.mode:serverless-single-lang"
+	ssiWaitMarkerPrefix = "dd-ssi-wait"
 
 	// freshnessLabel is the GCP label key carrying the creation timestamp. Label keys
 	// cannot contain ':', so the spec's one_e2e_created:<ts> tag is expressed as the
@@ -41,6 +46,8 @@ type volumeMount struct {
 type container struct {
 	Name         string        `json:"name"`
 	Image        string        `json:"image"`
+	Command      []string      `json:"command"`
+	Args         []string      `json:"args"`
 	Env          []envVar      `json:"env"`
 	VolumeMounts []volumeMount `json:"volumeMounts"`
 }
@@ -65,6 +72,13 @@ type cloudRunService struct {
 	Template template          `json:"template"`
 }
 
+// SSIExpectations pins Single-Language SSI wiring the module must produce.
+type SSIExpectations struct {
+	Language      string
+	TracerVersion string
+	VolumeMedium  string
+}
+
 // Expectations pins what an instrumented Cloud Run service must look like, so a mismatch
 // blames the module wiring rather than upstream drift.
 type Expectations struct {
@@ -75,6 +89,8 @@ type Expectations struct {
 	Site         string
 	SidecarImage string
 	CreatedTS    string
+	// SSI is nil when datadog_apm_instrumentation is unset.
+	SSI *SSIExpectations
 }
 
 func (s cloudRunService) getTemplate() template {
@@ -127,6 +143,68 @@ func describeService(ctx context.Context, client *run.ServicesClient, serviceNam
 	return parsed, nil
 }
 
+func expectedDDTags(runID string, ssi bool) string {
+	tags := []string{e2eshared.DefaultRunIDTagKey + ":" + runID}
+	if ssi {
+		tags = append(tags, injectionModeTag)
+	}
+
+	return strings.Join(tags, ",")
+}
+
+func tracerSidecarName(language string) string {
+	return "tracer-sidecar-" + language
+}
+
+func tracerRepoName(language string) string {
+	return map[string]string{
+		"java":   "dd-trace-java",
+		"js":     "dd-trace-js",
+		"python": "dd-trace-py",
+		"dotnet": "dd-trace-dotnet",
+		"ruby":   "dd-trace-rb",
+		"php":    "dd-trace-php",
+	}[language]
+}
+
+func ssiLanguageEnv(language string) map[string]string {
+	switch language {
+	case "js":
+		return map[string]string{
+			"NODE_OPTIONS": " --require=" + tracerVolumePath + "/node_modules/dd-trace/init",
+		}
+	case "python":
+		return map[string]string{
+			"PYTHONPATH": tracerVolumePath + "/",
+			"DD_INJECT_EXPERIMENTAL_OVERRIDE_USER_DDTRACE": "true",
+		}
+	case "java":
+		return map[string]string{
+			"JAVA_TOOL_OPTIONS": " -javaagent:" + tracerVolumePath + "/dd-java-agent.jar -XX:OnError=" + tracerVolumePath + "/java/continuousprofiler/tmp/dd_crash_uploader.sh -XX:ErrorFile=" + tracerVolumePath + "/java/continuousprofiler/tmp/hs_err_pid_%p.log",
+		}
+	case "dotnet":
+		return map[string]string{
+			"CORECLR_ENABLE_PROFILING": "1",
+			"CORECLR_PROFILER":         "{846F5F1C-F9AE-4B07-969E-05C26BC060D8}",
+			"CORECLR_PROFILER_PATH":    tracerVolumePath + "/Datadog.Trace.ClrProfiler.Native.so",
+			"DD_DOTNET_TRACER_HOME":    tracerVolumePath,
+			"DD_TRACE_LOG_DIRECTORY":   tracerVolumePath + "/logs",
+			"LD_PRELOAD":               tracerVolumePath + "/continuousprofiler/Datadog.Linux.ApiWrapper.x64.so",
+		}
+	case "ruby":
+		return map[string]string{
+			"RUBYOPT": " -r" + tracerVolumePath + "/auto_inject",
+		}
+	case "php":
+		return map[string]string{
+			"PHP_INI_SCAN_DIR":       tracerVolumePath + "/linux-gnu/loader",
+			"DD_LOADER_PACKAGE_PATH": tracerVolumePath,
+		}
+	default:
+		return nil
+	}
+}
+
 // verifyInstrumented asserts the module produced a correctly instrumented service: the
 // sidecar + shared volume + mounts are present, the wiring env vars are set, and the
 // identifying labels hold the expected *values* (identity, not mere existence).
@@ -140,6 +218,9 @@ func verifyInstrumented(svc cloudRunService, exp Expectations) error {
 
 		return v.Err("instrumented contract violated")
 	}
+
+	ssiEnabled := exp.SSI != nil
+	wantTags := expectedDDTags(exp.RunID, ssiEnabled)
 
 	// Sidecar: present and running the pinned serverless-init image.
 	var sidecar *container
@@ -181,16 +262,22 @@ func verifyInstrumented(svc cloudRunService, exp Expectations) error {
 			"DD_SERVICE":             exp.ServiceName,
 			"DD_ENV":                 exp.Env,
 			"DD_VERSION":             exp.Version,
-			"DD_TAGS":                e2eshared.DefaultRunIDTagKey + ":" + exp.RunID,
+			"DD_TAGS":                wantTags,
 			"DD_HEALTH_PORT":         "5555",
 			"DD_SERVERLESS_LOG_PATH": "/shared-volume/logs/*.log",
 		})
+		if ssiEnabled {
+			e2eshared.RequireValues(&v, "sidecar env var", sidecarEnv, map[string]string{
+				"DD_TRACE_ENABLED": "true",
+			})
+		}
 	}
 
 	// App containers: log-injection + identity env vars, plus the log volume.
 	appContainers := 0
-	for _, c := range containers {
-		if c.Name == sidecarName {
+	for i := range containers {
+		c := &containers[i]
+		if c.Name == sidecarName || strings.HasPrefix(c.Name, "tracer-sidecar-") {
 			continue
 		}
 		appContainers++
@@ -201,13 +288,32 @@ func verifyInstrumented(svc cloudRunService, exp Expectations) error {
 			"DD_VERSION":             exp.Version,
 			"DD_LOGS_INJECTION":      "true",
 			"DD_SERVERLESS_LOG_PATH": "/shared-volume/logs/*.log",
+			"DD_TAGS":                wantTags,
 		})
 		if !c.hasMount(sharedVolumeName, "/shared-volume") {
 			v.Addf("app container %q does not mount shared volume %q at /shared-volume", c.Name, sharedVolumeName)
 		}
+		if ssiEnabled {
+			verifyAppSSI(&v, c, exp.SSI)
+		} else if c.hasMount(tracerVolumeName, tracerVolumePath) {
+			v.Addf("app container %q unexpectedly mounts tracer volume %q", c.Name, tracerVolumeName)
+		}
 	}
 	if appContainers == 0 {
 		v.Addf("service has no app containers")
+	}
+
+	if ssiEnabled {
+		verifyTracerSidecar(&v, tmpl, exp.SSI)
+	} else {
+		for _, c := range containers {
+			if strings.HasPrefix(c.Name, "tracer-sidecar-") {
+				v.Addf("unexpected tracer sidecar %q when SSI is disabled", c.Name)
+			}
+		}
+		if _, ok := findVolume(tmpl.Volumes, tracerVolumeName); ok {
+			v.Addf("unexpected tracer volume %q when SSI is disabled", tracerVolumeName)
+		}
 	}
 
 	// Identifying labels carry the expected values. version is mirrored into a label
@@ -224,6 +330,79 @@ func verifyInstrumented(svc cloudRunService, exp Expectations) error {
 	}
 
 	return v.Err("instrumented contract violated")
+}
+
+func verifyAppSSI(v *e2eshared.Violations, app *container, ssi *SSIExpectations) {
+	if !app.hasMount(tracerVolumeName, tracerVolumePath) {
+		v.Addf("app container %q does not mount tracer volume at %s", app.Name, tracerVolumePath)
+	}
+
+	appEnv := app.envMap()
+	e2eshared.RequireValues(v, fmt.Sprintf("app container %q env var", app.Name), appEnv, map[string]string{
+		"DD_TRACE_ENABLED": "true",
+	})
+	e2eshared.RequireValues(v, fmt.Sprintf("app container %q SSI env var", app.Name), appEnv, ssiLanguageEnv(ssi.Language))
+
+	if len(app.Command) != 2 || app.Command[0] != "sh" || app.Command[1] != "-c" {
+		v.Addf("app container %q command = %#v, want [sh -c] SSI wait wrapper", app.Name, app.Command)
+	}
+	if len(app.Args) < 2 {
+		v.Addf("app container %q args too short for SSI wait wrapper: %#v", app.Name, app.Args)
+		return
+	}
+	marker := fmt.Sprintf("%s/.%s-copy-finished", tracerVolumePath, tracerRepoName(ssi.Language))
+	if !strings.Contains(app.Args[0], marker) {
+		v.Addf("app container %q wait script missing marker %q; args[0]=%q", app.Name, marker, app.Args[0])
+	}
+	if app.Args[1] != ssiWaitMarkerPrefix {
+		v.Addf("app container %q args[1] = %q, want %q", app.Name, app.Args[1], ssiWaitMarkerPrefix)
+	}
+}
+
+func verifyTracerSidecar(v *e2eshared.Violations, tmpl template, ssi *SSIExpectations) {
+	wantName := tracerSidecarName(ssi.Language)
+	var tracer *container
+	for i := range tmpl.Containers {
+		if tmpl.Containers[i].Name == wantName {
+			tracer = &tmpl.Containers[i]
+			break
+		}
+	}
+	if tracer == nil {
+		v.Addf("tracer sidecar %q missing", wantName)
+		return
+	}
+
+	wantImage := fmt.Sprintf("gcr.io/datadoghq/dd-lib-%s-init:%s", ssi.Language, ssi.TracerVersion)
+	if tracer.Image != wantImage {
+		v.Addf("tracer sidecar image = %q, want %q", tracer.Image, wantImage)
+	}
+	if !tracer.hasMount(tracerVolumeName, tracerVolumePath) {
+		v.Addf("tracer sidecar does not mount %q at %s", tracerVolumeName, tracerVolumePath)
+	}
+	if len(tracer.Args) == 0 || !strings.Contains(tracer.Args[0], "/datadog-init/copy-lib.sh "+tracerVolumePath) {
+		v.Addf("tracer sidecar args missing copy-lib.sh invocation: %#v", tracer.Args)
+	}
+
+	vol, ok := findVolume(tmpl.Volumes, tracerVolumeName)
+	if !ok {
+		v.Addf("tracer volume %q missing", tracerVolumeName)
+		return
+	}
+	if vol.EmptyDir == nil {
+		v.Addf("tracer volume %q is not an emptyDir", tracerVolumeName)
+		return
+	}
+	if vol.EmptyDir.Medium != ssi.VolumeMedium {
+		v.Addf("tracer volume medium = %q, want %q", vol.EmptyDir.Medium, ssi.VolumeMedium)
+	}
+	wantLimit := "500Mi"
+	if ssi.VolumeMedium == "DISK" {
+		wantLimit = "10Gi"
+	}
+	if vol.EmptyDir.SizeLimit != wantLimit {
+		v.Addf("tracer volume size_limit = %q, want %q", vol.EmptyDir.SizeLimit, wantLimit)
+	}
 }
 
 // verifyClean asserts that the Cloud Run API reports the service as deleted, rather

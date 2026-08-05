@@ -13,10 +13,7 @@ WORKDIR /app
 
 COPY Gemfile Gemfile.lock* ./
 
-# Install gems with platform-specific flags
-RUN bundle config set --local deployment 'false' && \
-    bundle config set --local path 'vendor/bundle' && \
-    bundle install --jobs 4 --retry 3
+RUN bundle install --jobs 4 --retry 3
 
 ENV PORT=8080
 EXPOSE 8080
@@ -30,7 +27,7 @@ FROM runtime AS ssi
 
 # SSI off (default): install the datadog gem for the manual fallback in app.rb.
 FROM runtime AS manual
-RUN echo "gem 'datadog', '~> 2.19', require: false" >> Gemfile && \
+RUN bundle add datadog --require=datadog/auto_instrument && \
     bundle install --jobs 4 --retry 3
 
 FROM manual

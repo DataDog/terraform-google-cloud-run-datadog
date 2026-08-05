@@ -57,10 +57,8 @@ module "datadog-cloud-run-v2-python" {
 
     containers = [
       {
-        name    = "cloudrun-tf-python-example"
-        image   = var.image
-        command = ["python"]
-        args    = ["app.py"]
+        name  = "cloudrun-tf-python-example"
+        image = var.image
         resources = {
           limits = {
             cpu    = "1"
