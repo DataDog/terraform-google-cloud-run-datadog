@@ -1,6 +1,7 @@
 name: E2E Test
 
-# Full instrumentation lifecycle against a live, ephemeral Cloud Run service.
+# Full instrumentation lifecycle against live, ephemeral Cloud Run services
+# for every examples runtime.
 
 permissions:
   contents: read
@@ -49,6 +50,9 @@ jobs:
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER_E2E }}
           service_account: ${{ vars.GCP_SERVICE_ACCOUNT_E2E }}
 
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@77e7a554d41e2ee56fc945c52dfd3f33d12def9a # v2.1.4
+
       # Mint short-lived Datadog credentials via dd-sts (GitHub OIDC -> Datadog).
       - name: Get Datadog credentials (dd-sts)
         id: dd-sts
@@ -56,14 +60,24 @@ jobs:
         with:
           policy: terraform-google-cloud-run-datadog-e2e
 
-      - name: Run e2e tests
-        working-directory: e2e
-        shell: bash
-        run: go test -count=1 -v -timeout 30m -json ./... | jq --unbuffered -jr 'select(.Action == "output") | .Output'
+      - name: Build e2e workload images
         env:
           GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID_E2E }}
           GCP_REGION: ${{ vars.GCP_REGION_E2E }}
-          GCP_CLOUD_RUN_APP_IMAGE_E2E: ${{ vars.GCP_CLOUD_RUN_APP_IMAGE_E2E }}
+          E2E_IMAGE_TAG: ${{ github.sha }}
+        run: ./e2e/build_images.sh
+
+      - name: Run e2e tests
+        working-directory: e2e
+        run: |
+          set -a
+          # shellcheck disable=SC1091
+          source .image-env
+          set +a
+          go test -count=1 -v -timeout 120m -json ./... | jq --unbuffered -jr 'select(.Action == "output") | .Output'
+        env:
+          GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID_E2E }}
+          GCP_REGION: ${{ vars.GCP_REGION_E2E }}
           DATADOG_API_KEY: ${{ steps.dd-sts.outputs.api_key }}
           DATADOG_APP_KEY: ${{ steps.dd-sts.outputs.app_key }}
           DD_SITE: ${{ vars.DD_SITE_E2E || 'datadoghq.com' }}
