@@ -38,9 +38,3 @@ variable "datadog_api_key" {
   description = "The api key for datadog"
   nullable    = false
 }
-
-variable "datadog_apm_instrumentation" {
-  type        = bool
-  description = "Whether to enable Datadog APM auto-instrumentation for Ruby. enter 'true' or 'false'"
-  nullable    = false
-}

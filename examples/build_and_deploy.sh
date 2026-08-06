@@ -53,13 +53,7 @@ gcloud config set project ${PROJECT_ID}
 gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
 
 echo -e "\n====== Building Docker image ======"
-DOCKER_BUILD_ARGS=()
-# When SSI is enabled, stop at the `ssi` stage (before manual tracer config).
-# Otherwise the default `manual` stage runs the full Dockerfile.
-if [ "${TF_VAR_datadog_apm_instrumentation:-false}" = "true" ]; then
-    DOCKER_BUILD_ARGS+=(--target ssi)
-fi
-docker build --quiet --platform linux/amd64 "${DOCKER_BUILD_ARGS[@]}" -t ${IMAGE_NAME} .
+docker build --quiet --platform linux/amd64 -t ${IMAGE_NAME} .
 docker push ${IMAGE_NAME}
 
 # Deploy to Cloud Run

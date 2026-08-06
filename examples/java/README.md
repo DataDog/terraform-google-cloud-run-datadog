@@ -4,12 +4,8 @@ This example demonstrates a step-by-step on how to use the `terraform-google-clo
 
 The sample app is a Spring Boot service. Spring Boot is auto-instrumented by the Datadog Java tracer, so no application code changes are needed to get traces.
 
-## Instrumentation modes
-
-The `Dockerfile` builds two variants of the same app, and `datadog_apm_instrumentation` selects which one you should deploy:
-
-- `datadog_apm_instrumentation = false` (the default `manual` stage): the image ships `dd-java-agent.jar` and loads it with `JAVA_TOOL_OPTIONS=-javaagent:/app/dd-java-agent.jar`.
-- `datadog_apm_instrumentation = true` (the `ssi` stage): the image ships no agent. The module runs a tracer sidecar that stages the agent in `/datadog-lib` and sets `JAVA_TOOL_OPTIONS` for you. Shipping an agent in the image as well would load two copies.
+The image ships `dd-java-agent.jar` and loads it with `JAVA_TOOL_OPTIONS=-javaagent:/app/dd-java-agent.jar`.
+For auto-instrumentation without an agent in the image, see [`examples/java-ssi`](../java-ssi).
 
 ## Steps to Deploy
 Create a [Datadog API Key](https://app.datadoghq.com/organization-settings/api-keys)
@@ -35,14 +31,6 @@ Make sure you're logged in and have access to push to your registry.
 ```
 gcloud builds submit --tag $REGION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/$IMAGE_NAME:latest \
   --project $PROJECT_ID
-```
-
-To build the SSI variant instead, target the `ssi` stage:
-
-```
-docker build --platform linux/amd64 --target ssi \
-  -t $REGION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/$IMAGE_NAME:latest .
-docker push $REGION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/$IMAGE_NAME:latest
 ```
 
 #### Troubleshooting
@@ -92,7 +80,6 @@ The workload container requests `1Gi` rather than the `512Mi` the other examples
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_datadog_api_key"></a> [datadog\_api\_key](#input\_datadog\_api\_key) | The api key for datadog | `string` | n/a | yes |
-| <a name="input_datadog_apm_instrumentation"></a> [datadog\_apm\_instrumentation](#input\_datadog\_apm\_instrumentation) | Whether to enable Datadog APM auto-instrumentation for Java. enter 'true' or 'false' | `bool` | n/a | yes |
 | <a name="input_image"></a> [image](#input\_image) | The image to deploy the service to | `string` | `"us-docker.pkg.dev/cloudrun/container/hello"` | no |
 | <a name="input_name"></a> [name](#input\_name) | The name of the Cloud Run service | `string` | `"cloud-run-tf-example-java"` | no |
 | <a name="input_project"></a> [project](#input\_project) | The project ID to deploy the service to | `string` | n/a | yes |

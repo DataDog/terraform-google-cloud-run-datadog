@@ -12,11 +12,7 @@ module "datadog-cloud-run-v2-php" {
   location            = var.region
   deletion_protection = false
 
-  datadog_api_key = var.datadog_api_key
-  datadog_apm_instrumentation = var.datadog_apm_instrumentation ? {
-    language          = "php"
-    tracer_init_image = "us-docker.pkg.dev/datadog-serverless-gcp-dev/gcr.io/test-dd-lib-php-init:test-probe"
-  } : null
+  datadog_api_key        = var.datadog_api_key
   datadog_site           = "datadoghq.com"
   datadog_service        = "cloud-run-tf-php-example"
   datadog_version        = "1_0_0"
@@ -81,7 +77,7 @@ module "datadog-cloud-run-v2-php" {
     ]
     scaling = {
       min_instance_count = 1
-      max_instance_count = 10
+      max_instance_count = 1
     }
   }
 
@@ -92,10 +88,9 @@ module "datadog-cloud-run-v2-php" {
     }
   ]
 
-  # Service-level max must be <= 10 when SSI uses a 10Gi DISK emptyDir (ephemeral-disk quota).
   scaling = {
     min_instance_count = 1
-    max_instance_count = 10
+
   }
 
 }

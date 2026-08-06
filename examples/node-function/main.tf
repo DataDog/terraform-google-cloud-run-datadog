@@ -13,11 +13,7 @@ module "datadog-cloud-run-v2-node" {
   deletion_protection = false
   client              = "terraform"
 
-  datadog_api_key = var.datadog_api_key
-  datadog_apm_instrumentation = var.datadog_apm_instrumentation ? {
-    language          = "js"
-    tracer_init_image = "us-docker.pkg.dev/datadog-serverless-gcp-dev/gcr.io/test-dd-lib-js-init:test-probe"
-  } : null
+  datadog_api_key        = var.datadog_api_key
   datadog_site           = "datadoghq.com"
   datadog_service        = var.name
   datadog_version        = "1_0_0"

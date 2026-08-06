@@ -12,11 +12,7 @@ module "datadog-cloud-run-v2-node" {
   location            = var.region
   deletion_protection = false
 
-  datadog_api_key = var.datadog_api_key
-  datadog_apm_instrumentation = var.datadog_apm_instrumentation ? {
-    language          = "js"
-    tracer_init_image = "us-docker.pkg.dev/datadog-serverless-gcp-dev/gcr.io/test-dd-lib-js-init:test-probe"
-  } : null
+  datadog_api_key        = var.datadog_api_key
   datadog_site           = "datadoghq.com"
   datadog_service        = "cloud-run-tf-node-example"
   datadog_version        = "1_0_0"

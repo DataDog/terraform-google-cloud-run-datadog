@@ -10,7 +10,7 @@ RUN dotnet restore dotnet.csproj
 COPY . .
 RUN dotnet publish dotnet.csproj -c Release -o out --no-restore
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 
 # Copy the built application
@@ -18,16 +18,11 @@ COPY --from=build /app/out .
 
 ENV PORT=8080
 EXPOSE 8080
-CMD ["dotnet", "dotnet.dll"]
 
-# SSI on: stop here; module will handle apm configuration 
-FROM runtime AS ssi
-
-# SSI off (default): add configuration manually
-FROM runtime AS manual
+# Datadog automatic instrumentation environment variables
 ENV CORECLR_ENABLE_PROFILING=1 \
   CORECLR_PROFILER={846F5F1C-F9AE-4B07-969E-05C26BC060D8} \
   CORECLR_PROFILER_PATH=/app/datadog/linux-x64/Datadog.Trace.ClrProfiler.Native.so \
   DD_DOTNET_TRACER_HOME=/app/datadog
 
-FROM manual
+CMD ["dotnet", "dotnet.dll"]

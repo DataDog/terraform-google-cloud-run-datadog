@@ -1,9 +1,11 @@
 # Cloud Run E2E tests
 
 Live instrumentation lifecycle against ephemeral Cloud Run services for every
-runtime under [`examples/`](../examples): sidecar-only for all, plus Single-Language
-SSI where the module supports it (`node`, `java`, `python`, `ruby`, `php`, `dotnet`,
-`node-function`). Go is sidecar-only.
+runtime under [`examples/`](../examples). Each mode is built from its own example:
+sidecar images come from `examples/<runtime>`, which ships the tracer in the image,
+and Single-Language SSI images from `examples/<runtime>-ssi`, which ships no tracer
+and lets the module inject one. SSI covers `node`, `java`, `python`, `ruby`, `php`,
+`dotnet`, and `node-function`; Go is sidecar-only.
 
 ## Run locally
 
@@ -19,7 +21,7 @@ gcloud auth configure-docker us-central1-docker.pkg.dev
 export GCP_PROJECT_ID=datadog-serverless-gcp-dev   # optional override
 export GCP_REGION=us-central1                      # optional override
 
-# 1) Build + push workload images from examples/*/src (writes e2e/.image-env)
+# 1) Build + push workload images from the example dirs (writes e2e/.image-env)
 ./e2e/build_images.sh
 
 # 2) Run the suite

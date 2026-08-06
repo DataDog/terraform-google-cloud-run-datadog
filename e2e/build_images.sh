@@ -72,52 +72,64 @@ image_ref() {
   echo "${BASE}/${1}-${2}:${TAG}"
 }
 
-build_docker_runtime() {
+# Each mode has its own example directory: examples/<runtime> ships the tracer in the
+# image, examples/<runtime>-ssi ships no tracer and lets the module inject one.
+example_dir() {
+  case "$2" in
+  ssi) echo "${1}-ssi" ;;
+  *) echo "$1" ;;
+  esac
+}
+
+env_key() {
+  echo "E2E_IMAGE_$(echo "$1" | tr '[:lower:]-' '[:upper:]_')_$(echo "$2" | tr '[:lower:]' '[:upper:]')"
+}
+
+build_docker_image() {
   local runtime="$1"
-  local src="$EXAMPLES_DIR/${runtime}/src"
+  local mode="$2"
+  local src="$EXAMPLES_DIR/$(example_dir "$runtime" "$mode")/src"
   if [ ! -f "$src/Dockerfile" ]; then
     echo "Error: missing Dockerfile at $src" >&2
     exit 1
   fi
 
-  local sidecar_img
-  sidecar_img="$(image_ref "$runtime" sidecar)"
-  echo "====== Building ${runtime} sidecar (manual) ======"
-  docker build --platform linux/amd64 --target manual -t "${sidecar_img}" "$src"
-  docker push "${sidecar_img}"
-  emit "E2E_IMAGE_$(echo "$runtime" | tr '[:lower:]-' '[:upper:]_')_SIDECAR" "${sidecar_img}"
-
-  # Go has no SSI path in the module; still build an ssi-stage tag only when requested.
-  if [ "${2:-}" = "ssi" ]; then
-    local ssi_img
-    ssi_img="$(image_ref "$runtime" ssi)"
-    echo "====== Building ${runtime} ssi ======"
-    docker build --platform linux/amd64 --target ssi -t "${ssi_img}" "$src"
-    docker push "${ssi_img}"
-    emit "E2E_IMAGE_$(echo "$runtime" | tr '[:lower:]-' '[:upper:]_')_SSI" "${ssi_img}"
-  fi
+  local img
+  img="$(image_ref "$runtime" "$mode")"
+  echo "====== Building ${runtime} ${mode} from ${src#"$REPO_ROOT/"} ======"
+  docker build --platform linux/amd64 -t "${img}" "$src"
+  docker push "${img}"
+  emit "$(env_key "$runtime" "$mode")" "${img}"
 }
 
-# Dockerfile runtimes: sidecar (manual) for all; SSI stage where the module supports it.
-build_docker_runtime go
-build_docker_runtime node ssi
-build_docker_runtime java ssi
-build_docker_runtime python ssi
-build_docker_runtime ruby ssi
-build_docker_runtime php ssi
-build_docker_runtime dotnet ssi
+build_pack_image() {
+  local runtime="$1"
+  local mode="$2"
+  local src="$EXAMPLES_DIR/$(example_dir "$runtime" "$mode")/src"
 
-# node-function: Cloud Buildpacks. One image serves sidecar + SSI (app gates manual tracer).
-FN_SRC="$EXAMPLES_DIR/node-function/src"
-FN_IMG="$(image_ref node-function sidecar)"
-echo "====== Building node-function (pack) ======"
-gcloud builds submit --pack \
-  "image=${FN_IMG},env=GOOGLE_FUNCTION_TARGET=helloHttp" \
-  --project "${PROJECT_ID}" \
-  "$FN_SRC"
-emit E2E_IMAGE_NODE_FUNCTION_SIDECAR "${FN_IMG}"
-# Reuse the same pack image for SSI mode.
-emit E2E_IMAGE_NODE_FUNCTION_SSI "${FN_IMG}"
+  local img
+  img="$(image_ref "$runtime" "$mode")"
+  echo "====== Building ${runtime} ${mode} (pack) from ${src#"$REPO_ROOT/"} ======"
+  gcloud builds submit --pack \
+    "image=${img},env=GOOGLE_FUNCTION_TARGET=helloHttp" \
+    --project "${PROJECT_ID}" \
+    "$src"
+  emit "$(env_key "$runtime" "$mode")" "${img}"
+}
+
+# Sidecar mode: every runtime, including go, which has no SSI path in the module.
+for runtime in go node java python ruby php dotnet; do
+  build_docker_image "$runtime" sidecar
+done
+
+# SSI mode: the runtimes the module can inject a tracer for.
+for runtime in node java python ruby php dotnet; do
+  build_docker_image "$runtime" ssi
+done
+
+# node-function builds with Cloud Buildpacks rather than a Dockerfile.
+build_pack_image node-function sidecar
+build_pack_image node-function ssi
 
 echo
 echo "Wrote ${OUT_FILE}"

@@ -14,11 +14,6 @@ Datadog.configure do |c|
   # Activate integrations, change tracer settings, etc...
 end
 
-Datadog.configure do |c|
-  # Needed so tracer middleware attaches (auto_instrument alone leaves dd.trace_id=0).
-  c.tracing.instrument :sinatra
-end
-
 set :environment, :production
 set :port, 8080
 set :bind, '0.0.0.0'

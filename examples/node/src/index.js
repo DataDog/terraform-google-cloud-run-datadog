@@ -10,6 +10,9 @@
 
 const rawLogPath = process.env.DD_SERVERLESS_LOG_PATH;
 const LOG_FILE = rawLogPath && rawLogPath !== '' ? rawLogPath.replace('*.log', 'app.log') : '/shared-volume/logs/app.log';
+require('dd-trace').init({
+  logInjection: true,
+});
 
 const express = require('express');
 const helmet = require('helmet');
