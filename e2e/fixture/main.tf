@@ -24,6 +24,7 @@ module "datadog" {
   datadog_version        = var.datadog_version
   datadog_tags           = ["one_e2e_run_id:${var.run_id}"]
   datadog_enable_logging = true
+  build_config           = var.build_config
 
   # Pin the sidecar artifact by digest so an upstream serverless-init change
   # never turns into a red e2e run for this module.
@@ -39,8 +40,9 @@ module "datadog" {
   template = {
     containers = [
       {
-        name  = "app"
-        image = var.workload_image
+        name           = "app"
+        image          = var.workload_image
+        base_image_uri = var.base_image_uri
         resources = {
           limits = {
             cpu    = "1"
