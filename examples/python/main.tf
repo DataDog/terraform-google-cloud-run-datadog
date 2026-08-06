@@ -81,7 +81,7 @@ module "datadog-cloud-run-v2-python" {
     ]
     scaling = {
       min_instance_count = 1
-      max_instance_count = 10
+      max_instance_count = 1
     }
   }
 
@@ -94,7 +94,7 @@ module "datadog-cloud-run-v2-python" {
 
   scaling = {
     min_instance_count = 1
-    max_instance_count = 10
+
   }
 
 }

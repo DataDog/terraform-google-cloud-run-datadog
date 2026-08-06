@@ -25,7 +25,7 @@ const (
 	tracerVolumePath = "/datadog-lib"
 	injectionModeTag = "_dd.injection.mode:serverless-single-lang"
 	defaultReadyPort = 5100
-	probeServerPath = "/datadog-init/probe-server"
+	probeServerPath  = "/datadog-init/probe-server"
 
 	// freshnessLabel is the GCP label key carrying the creation timestamp. Label keys
 	// cannot contain ':', so the spec's one_e2e_created:<ts> tag is expressed as the
@@ -85,10 +85,10 @@ type cloudRunService struct {
 
 // SSIExpectations pins Single-Language SSI wiring the module must produce.
 type SSIExpectations struct {
-	Language      string
-	TracerVersion string
-	VolumeMedium  string
-	ReadyPort     int
+	Language        string
+	TracerVersion   string
+	VolumeMedium    string
+	ReadyPort       int
 	TracerInitImage string
 }
 

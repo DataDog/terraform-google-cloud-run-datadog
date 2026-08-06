@@ -76,7 +76,7 @@ module "datadog-cloud-run-v2-node" {
 
     scaling = {
       min_instance_count = 1
-      max_instance_count = 10
+      max_instance_count = 1
     }
   }
 
@@ -87,10 +87,9 @@ module "datadog-cloud-run-v2-node" {
     }
   ]
 
-  # Service-level max must be <= 10 when SSI uses a 10Gi DISK emptyDir (ephemeral-disk quota).
   scaling = {
     min_instance_count = 1
-    max_instance_count = 10
+
   }
 }
 
