@@ -101,6 +101,7 @@ build_docker_runtime() {
 # Dockerfile runtimes: sidecar (manual) for all; SSI stage where the module supports it.
 build_docker_runtime go
 build_docker_runtime node ssi
+build_docker_runtime java ssi
 build_docker_runtime python ssi
 build_docker_runtime ruby ssi
 build_docker_runtime php ssi

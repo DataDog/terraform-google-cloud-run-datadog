@@ -25,6 +25,13 @@ variable "workload_image" {
   nullable    = false
 }
 
+variable "workload_memory" {
+  type        = string
+  description = "Memory limit for the workload container. Raised for JVM workloads, which need more headroom than the scripting runtimes."
+  default     = "512Mi"
+  nullable    = false
+}
+
 variable "sidecar_image" {
   type        = string
   description = "Datadog serverless-init sidecar image, pinned by digest so failures blame the module, not upstream."
@@ -64,9 +71,9 @@ variable "datadog_version" {
 
 variable "datadog_apm_instrumentation" {
   type = object({
-    language       = string
-    tracer_version = optional(string, "latest")
-    volume_medium  = optional(string, "MEMORY")
+    language          = string
+    tracer_version    = optional(string, "latest")
+    volume_medium     = optional(string, "MEMORY")
     tracer_init_image = optional(string)
   })
   description = "When set, enables Single-Language SSI (tracer sidecar + language env injection)."

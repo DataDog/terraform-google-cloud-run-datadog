@@ -2,9 +2,8 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2025 Datadog, Inc.
 
 // Manual APM fallback when SSI (datadog_apm_instrumentation) is disabled.
-if (!(process.env.NODE_OPTIONS || '').includes('dd-trace')) {
-  require('dd-trace').init({ logInjection: true });
-}
+const ssiInjected = (process.env.NODE_OPTIONS || '').includes('dd-trace');
+const tracer = ssiInjected ? null : require('dd-trace').init({ logInjection: true });
 
 const functions = require('@google-cloud/functions-framework');
 const rawLogPath = process.env.DD_SERVERLESS_LOG_PATH;
@@ -25,10 +24,13 @@ const logger = createLogger({
 });
 
 functions.http('helloHttp', (req, res) => {
-  const span = tracer.startSpan('helloHttp');
-  span.setTag('foo', 'bar');
-  logger.info('Hello World!');
-  span.finish();
-  res.set('Content-Type', 'text/plain');
-  res.send(`Hello ${req.query.name || req.body.name || 'World'}!`);
+  const handle = () => {
+    logger.info('Hello World!');
+    res.set('Content-Type', 'text/plain');
+    res.send(`Hello ${req.query.name || req.body?.name || 'World'}!`);
+  };
+
+  // tracer.trace activates the span, so the log line above picks up the trace id. Under
+  // SSI the preloaded tracer already traces the request.
+  return tracer ? tracer.trace('helloHttp', handle) : handle();
 });

@@ -8,7 +8,7 @@ locals {
   tracer_volume_name       = "datadog-tracer"
   tracer_volume_mount_path = "/datadog-lib"
   apm_enabled              = var.datadog_apm_instrumentation != null
-  using_disk_medium        = local.apm_enabled && var.datadog_apm_instrumentation.volume_medium == "DISK"
+  using_disk_medium        = local.apm_enabled ? var.datadog_apm_instrumentation.volume_medium == "DISK" : false
   injection_mode_tag       = "_dd.injection.mode:serverless-single-lang"
   tracer_sidecar_name = local.apm_enabled ? (
     "tracer-sidecar-${var.datadog_apm_instrumentation.language}"
@@ -219,7 +219,7 @@ check "ready_port_is_not_already_in_use" {
   assert {
     # Containers in an instance share a network namespace, so the readiness port must not
     # be claimed by the agent sidecar or by an app container.
-    condition = !local.apm_enabled || !contains(
+    condition = local.apm_enabled ? !contains(
       concat(
         [var.datadog_sidecar.health_port],
         [
@@ -228,7 +228,7 @@ check "ready_port_is_not_already_in_use" {
         ],
       ),
       var.datadog_apm_instrumentation.ready_port,
-    )
+    ) : true
     error_message = "datadog_apm_instrumentation.ready_port (${try(var.datadog_apm_instrumentation.ready_port, "null")}) is already used by datadog_sidecar.health_port or a template.containers port. All containers in a Cloud Run instance share one network namespace, so the tracer readiness signal needs a port of its own."
   }
 }

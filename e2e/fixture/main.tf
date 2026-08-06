@@ -47,7 +47,7 @@ module "datadog" {
         resources = {
           limits = {
             cpu    = "1"
-            memory = "512Mi"
+            memory = var.workload_memory
           }
         }
         ports = {

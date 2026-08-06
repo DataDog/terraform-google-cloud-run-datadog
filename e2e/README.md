@@ -2,7 +2,7 @@
 
 Live instrumentation lifecycle against ephemeral Cloud Run services for every
 runtime under [`examples/`](../examples): sidecar-only for all, plus Single-Language
-SSI where the module supports it (`node`, `python`, `ruby`, `php`, `dotnet`,
+SSI where the module supports it (`node`, `java`, `python`, `ruby`, `php`, `dotnet`,
 `node-function`). Go is sidecar-only.
 
 ## Run locally

@@ -174,7 +174,7 @@ Enables auto-instrumentation via a tracer sidecar.
   an instance share a network namespace.
 DESCRIPTION
   validation {
-    condition = var.datadog_apm_instrumentation == null || contains(
+    condition = var.datadog_apm_instrumentation == null ? true : contains(
       [
         "java",
         "python",
@@ -189,7 +189,7 @@ DESCRIPTION
   }
 
   validation {
-    condition = var.datadog_apm_instrumentation == null || contains(
+    condition = var.datadog_apm_instrumentation == null ? true : contains(
       ["DISK", "MEMORY"],
       var.datadog_apm_instrumentation.volume_medium,
     )
@@ -197,7 +197,7 @@ DESCRIPTION
   }
 
   validation {
-    condition = var.datadog_apm_instrumentation == null || (
+    condition = var.datadog_apm_instrumentation == null ? true : (
       var.datadog_apm_instrumentation.ready_port > 1024 &&
       var.datadog_apm_instrumentation.ready_port <= 65535
     )
