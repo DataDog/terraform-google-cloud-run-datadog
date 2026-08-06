@@ -68,13 +68,14 @@ resource "google_cloud_run_v2_service" "this" {
     dynamic "containers" {
       for_each = local.template_containers
       content {
-        args           = try(containers.value.args, null)
-        base_image_uri = try(containers.value.base_image_uri, null)
-        command        = try(containers.value.command, null)
-        depends_on     = try(containers.value.depends_on, null)
-        image          = containers.value.image
-        name           = try(containers.value.name, null)
-        working_dir    = try(containers.value.working_dir, null)
+        args             = try(containers.value.args, null)
+        base_image_uri   = try(containers.value.base_image_uri, null)
+        command          = try(containers.value.command, null)
+        depends_on       = try(containers.value.depends_on, null)
+        image            = containers.value.image
+        name             = try(containers.value.name, null)
+        sandbox_launcher = try(containers.value.sandbox_launcher, null)
+        working_dir      = try(containers.value.working_dir, null)
         dynamic "env" {
           for_each = try(containers.value.env, null) != null ? containers.value.env : []
           content {
