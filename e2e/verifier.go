@@ -19,12 +19,13 @@ import (
 
 // Names the module assigns to the components it injects.
 const (
-	sidecarName         = "datadog-sidecar"
-	sharedVolumeName    = "shared-volume"
-	tracerVolumeName    = "datadog-tracer"
-	tracerVolumePath    = "/datadog-lib"
-	injectionModeTag    = "_dd.injection.mode:serverless-single-lang"
-	ssiWaitMarkerPrefix = "dd-ssi-wait"
+	sidecarName      = "datadog-sidecar"
+	sharedVolumeName = "shared-volume"
+	tracerVolumeName = "datadog-tracer"
+	tracerVolumePath = "/datadog-lib"
+	injectionModeTag = "_dd.injection.mode:serverless-single-lang"
+	defaultReadyPort = 5100
+	probeServerPath = "/datadog-init/probe-server"
 
 	// freshnessLabel is the GCP label key carrying the creation timestamp. Label keys
 	// cannot contain ':', so the spec's one_e2e_created:<ts> tag is expressed as the
@@ -43,6 +44,14 @@ type volumeMount struct {
 	MountPath string `json:"mountPath"`
 }
 
+type tcpSocketAction struct {
+	Port int `json:"port"`
+}
+
+type probe struct {
+	TCPSocket *tcpSocketAction `json:"tcpSocket"`
+}
+
 type container struct {
 	Name         string        `json:"name"`
 	Image        string        `json:"image"`
@@ -50,6 +59,8 @@ type container struct {
 	Args         []string      `json:"args"`
 	Env          []envVar      `json:"env"`
 	VolumeMounts []volumeMount `json:"volumeMounts"`
+	DependsOn    []string      `json:"dependsOn"`
+	StartupProbe *probe        `json:"startupProbe"`
 }
 
 type emptyDir struct {
@@ -77,6 +88,18 @@ type SSIExpectations struct {
 	Language      string
 	TracerVersion string
 	VolumeMedium  string
+	ReadyPort     int
+	TracerInitImage string
+}
+
+// tracerInitImage is the image the tracer sidecar must run, defaulting to the published
+// init image for the language when no override is expected.
+func (s *SSIExpectations) tracerInitImage() string {
+	if s.TracerInitImage != "" {
+		return s.TracerInitImage
+	}
+
+	return fmt.Sprintf("gcr.io/datadoghq/dd-lib-%s-init:%s", s.Language, s.TracerVersion)
 }
 
 // Expectations pins what an instrumented Cloud Run service must look like, so a mismatch
@@ -308,7 +331,7 @@ func verifyInstrumented(svc cloudRunService, exp Expectations) error {
 	} else {
 		for _, c := range containers {
 			if strings.HasPrefix(c.Name, "tracer-sidecar-") {
-				v.Addf("unexpected tracer sidecar %q when SSI is disabled", c.Name)
+				v.Addf("unexpected tracer container %q when SSI is disabled", c.Name)
 			}
 		}
 		if _, ok := findVolume(tmpl.Volumes, tracerVolumeName); ok {
@@ -343,46 +366,67 @@ func verifyAppSSI(v *e2eshared.Violations, app *container, ssi *SSIExpectations)
 	})
 	e2eshared.RequireValues(v, fmt.Sprintf("app container %q SSI env var", app.Name), appEnv, ssiLanguageEnv(ssi.Language))
 
-	if len(app.Command) != 2 || app.Command[0] != "sh" || app.Command[1] != "-c" {
-		v.Addf("app container %q command = %#v, want [sh -c] SSI wait wrapper", app.Name, app.Command)
+	// Startup is sequenced by container start order, so the workload entrypoint must be
+	// left alone: no marker wait script may appear in command or args.
+	wantDep := tracerSidecarName(ssi.Language)
+	if !containsString(app.DependsOn, wantDep) {
+		v.Addf("app container %q dependsOn = %#v, want it to include %q", app.Name, app.DependsOn, wantDep)
 	}
-	if len(app.Args) < 2 {
-		v.Addf("app container %q args too short for SSI wait wrapper: %#v", app.Name, app.Args)
-		return
+	marker := copyFinishedMarker(ssi.Language)
+	for _, arg := range append(append([]string{}, app.Command...), app.Args...) {
+		if strings.Contains(arg, marker) {
+			v.Addf("app container %q startup was rewritten with a marker wait (%q); it should keep its image entrypoint", app.Name, arg)
+
+			break
+		}
 	}
-	marker := fmt.Sprintf("%s/.%s-copy-finished", tracerVolumePath, tracerRepoName(ssi.Language))
-	if !strings.Contains(app.Args[0], marker) {
-		v.Addf("app container %q wait script missing marker %q; args[0]=%q", app.Name, marker, app.Args[0])
+}
+
+// verifyTracerReadiness checks the sidecar copies, gates on the marker, and only then execs
+// the listener that the app containers' startup probe waits on.
+func verifyTracerReadiness(v *e2eshared.Violations, tracer *container, ssi *SSIExpectations) {
+	invocation := containerInvocation(tracer)
+
+	wantListener := fmt.Sprintf("exec %s %d", probeServerPath, ssi.ReadyPort)
+	if !strings.Contains(invocation, wantListener) {
+		v.Addf("tracer sidecar does not exec the probe server (%q): %q", wantListener, invocation)
 	}
-	if app.Args[1] != ssiWaitMarkerPrefix {
-		v.Addf("app container %q args[1] = %q, want %q", app.Name, app.Args[1], ssiWaitMarkerPrefix)
+	if marker := copyFinishedMarker(ssi.Language); !strings.Contains(invocation, marker) {
+		v.Addf("tracer sidecar opens the readiness port without checking the copy marker %q: %q", marker, invocation)
+	}
+
+	// Without this probe Cloud Run starts dependents immediately, which would let the
+	// app boot before the tracer is in place.
+	switch {
+	case tracer.StartupProbe == nil:
+		v.Addf("tracer sidecar %q has no startup probe, so container start order would not wait for it", tracer.Name)
+	case tracer.StartupProbe.TCPSocket == nil:
+		v.Addf("tracer sidecar %q startup probe is not a tcpSocket probe", tracer.Name)
+	case tracer.StartupProbe.TCPSocket.Port != ssi.ReadyPort:
+		v.Addf("tracer sidecar %q startup probe port = %d, want %d", tracer.Name, tracer.StartupProbe.TCPSocket.Port, ssi.ReadyPort)
 	}
 }
 
 func verifyTracerSidecar(v *e2eshared.Violations, tmpl template, ssi *SSIExpectations) {
 	wantName := tracerSidecarName(ssi.Language)
-	var tracer *container
-	for i := range tmpl.Containers {
-		if tmpl.Containers[i].Name == wantName {
-			tracer = &tmpl.Containers[i]
-			break
-		}
-	}
+	tracer := findContainer(tmpl.Containers, wantName)
 	if tracer == nil {
 		v.Addf("tracer sidecar %q missing", wantName)
 		return
 	}
 
-	wantImage := fmt.Sprintf("gcr.io/datadoghq/dd-lib-%s-init:%s", ssi.Language, ssi.TracerVersion)
-	if tracer.Image != wantImage {
+	if wantImage := ssi.tracerInitImage(); tracer.Image != wantImage {
 		v.Addf("tracer sidecar image = %q, want %q", tracer.Image, wantImage)
 	}
 	if !tracer.hasMount(tracerVolumeName, tracerVolumePath) {
 		v.Addf("tracer sidecar does not mount %q at %s", tracerVolumeName, tracerVolumePath)
 	}
-	if len(tracer.Args) == 0 || !strings.Contains(tracer.Args[0], "/datadog-init/copy-lib.sh "+tracerVolumePath) {
-		v.Addf("tracer sidecar args missing copy-lib.sh invocation: %#v", tracer.Args)
+	// The image has no entrypoint of its own, so the copy script is part of the command the
+	// module builds.
+	if invocation := containerInvocation(tracer); !strings.Contains(invocation, "/datadog-init/copy-lib.sh "+tracerVolumePath) {
+		v.Addf("tracer sidecar does not invoke copy-lib.sh against %s: %q", tracerVolumePath, invocation)
 	}
+	verifyTracerReadiness(v, tracer, ssi)
 
 	vol, ok := findVolume(tmpl.Volumes, tracerVolumeName)
 	if !ok {
@@ -427,4 +471,35 @@ func findVolume(volumes []volume, name string) (volume, bool) {
 	}
 
 	return volume{}, false
+}
+
+func findContainer(containers []container, name string) *container {
+	for i := range containers {
+		if containers[i].Name == name {
+			return &containers[i]
+		}
+	}
+
+	return nil
+}
+
+// containerInvocation flattens command and args so checks can look for a fragment without
+// caring which of the two the module put it in.
+func containerInvocation(c *container) string {
+	return strings.Join(append(append([]string{}, c.Command...), c.Args...), " ")
+}
+
+func containsString(haystack []string, needle string) bool {
+	for _, s := range haystack {
+		if s == needle {
+			return true
+		}
+	}
+
+	return false
+}
+
+// copyFinishedMarker mirrors the marker path copy-lib.sh writes once the tracer is in place.
+func copyFinishedMarker(language string) string {
+	return fmt.Sprintf("%s/.%s-copy-finished", tracerVolumePath, tracerRepoName(language))
 }

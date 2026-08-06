@@ -5,6 +5,7 @@ package e2e
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -34,6 +35,8 @@ const (
 	testVersion = "1-0-0"
 
 	nodeFunctionBaseImage = "us-central1-docker.pkg.dev/serverless-runtimes/google-22-full/runtimes/nodejs22"
+
+	defaultTracerInitImageFormat = "us-docker.pkg.dev/datadog-serverless-gcp-dev/gcr.io/test-dd-lib-%s-init:test-probe"
 )
 
 type config struct {
@@ -43,6 +46,13 @@ type config struct {
 	site         string
 	ddAPIKey     string
 	ddAPPKey     string
+	// tracerInitImageFormat takes the language and yields the init image to copy from.
+	tracerInitImageFormat string
+}
+
+// tracerInitImage is the init image the SSI scenarios instrument with.
+func (c config) tracerInitImage(language string) string {
+	return fmt.Sprintf(c.tracerInitImageFormat, language)
 }
 
 // loadConfig reads the suite's shared inputs from the environment.
@@ -57,6 +67,10 @@ func loadConfig(t *testing.T) config {
 		site:         firstNonEmpty(os.Getenv("DD_SITE"), "datadoghq.com"),
 		ddAPIKey:     firstNonEmpty(os.Getenv("DATADOG_API_KEY"), os.Getenv("DD_API_KEY")),
 		ddAPPKey:     firstNonEmpty(os.Getenv("DATADOG_APP_KEY"), os.Getenv("DD_APP_KEY")),
+		tracerInitImageFormat: firstNonEmpty(
+			os.Getenv("E2E_TRACER_INIT_IMAGE_FORMAT"),
+			defaultTracerInitImageFormat,
+		),
 	}
 
 	missing := []string{}
@@ -82,10 +96,6 @@ type scenario struct {
 	imageEnv string
 	// ssiLanguage enables Single-Language SSI when non-empty (e.g. "js").
 	ssiLanguage string
-	// workloadCommand/Args are required when SSI is enabled (module wraps startup).
-	// For sidecar-only service examples they may be nil (image CMD is used).
-	workloadCommand []string
-	workloadArgs    []string
 	// isFunction enables Cloud Run Functions build_config + base_image_uri.
 	isFunction bool
 }
@@ -115,55 +125,44 @@ func runtimeScenarios() []scenario {
 			imageEnv: "E2E_IMAGE_DOTNET_SIDECAR",
 		},
 		{
-			name:            "node_function_sidecar",
-			imageEnv:        "E2E_IMAGE_NODE_FUNCTION_SIDECAR",
-			workloadCommand: []string{"npx"},
-			workloadArgs:    []string{"functions-framework", "--target=helloHttp"},
-			isFunction:      true,
+			name:       "node_function_sidecar",
+			imageEnv:   "E2E_IMAGE_NODE_FUNCTION_SIDECAR",
+			isFunction: true,
 		},
 
-		// SSI where the module supports it.
+		// SSI where the module supports it. No scenario sets a container command, so every
+		// workload runs its own image entrypoint: the module sequences startup through the
+		// tracer sidecar's startup probe rather than rewriting how the app starts.
 		{
-			name:            "node_ssi",
-			imageEnv:        "E2E_IMAGE_NODE_SSI",
-			ssiLanguage:     "js",
-			workloadCommand: []string{"node"},
-			workloadArgs:    []string{"index.js"},
+			name:        "node_ssi",
+			imageEnv:    "E2E_IMAGE_NODE_SSI",
+			ssiLanguage: "js",
 		},
 		{
-			name:            "python_ssi",
-			imageEnv:        "E2E_IMAGE_PYTHON_SSI",
-			ssiLanguage:     "python",
-			workloadCommand: []string{"python"},
-			workloadArgs:    []string{"app.py"},
+			name:        "python_ssi",
+			imageEnv:    "E2E_IMAGE_PYTHON_SSI",
+			ssiLanguage: "python",
 		},
 		{
-			name:            "ruby_ssi",
-			imageEnv:        "E2E_IMAGE_RUBY_SSI",
-			ssiLanguage:     "ruby",
-			workloadCommand: []string{"bundle", "exec", "ruby"},
-			workloadArgs:    []string{"app.rb"},
+			name:        "ruby_ssi",
+			imageEnv:    "E2E_IMAGE_RUBY_SSI",
+			ssiLanguage: "ruby",
 		},
 		{
-			name:            "php_ssi",
-			imageEnv:        "E2E_IMAGE_PHP_SSI",
-			ssiLanguage:     "php",
-			workloadCommand: []string{"apache2-foreground"},
+			name:        "php_ssi",
+			imageEnv:    "E2E_IMAGE_PHP_SSI",
+			ssiLanguage: "php",
 		},
 		{
-			name:            "dotnet_ssi",
-			imageEnv:        "E2E_IMAGE_DOTNET_SSI",
-			ssiLanguage:     "dotnet",
-			workloadCommand: []string{"dotnet"},
-			workloadArgs:    []string{"dotnet.dll"},
+			name:        "dotnet_ssi",
+			imageEnv:    "E2E_IMAGE_DOTNET_SSI",
+			ssiLanguage: "dotnet",
 		},
 		{
-			name:            "node_function_ssi",
-			imageEnv:        "E2E_IMAGE_NODE_FUNCTION_SSI",
-			ssiLanguage:     "js",
-			workloadCommand: []string{"npx"},
-			workloadArgs:    []string{"functions-framework", "--target=helloHttp"},
-			isFunction:      true,
+			name:        "node_function_ssi",
+			imageEnv:    "E2E_IMAGE_NODE_FUNCTION_SSI",
+			ssiLanguage: "js",
+			isFunction:  true,
 		},
 	}
 }
@@ -219,17 +218,12 @@ func runCloudRunE2E(t *testing.T, cfg config, sc scenario) {
 		"run_id":          runID,
 		"created_ts":      createdTS,
 	}
-	if len(sc.workloadCommand) > 0 {
-		vars["workload_command"] = sc.workloadCommand
-	}
-	if len(sc.workloadArgs) > 0 {
-		vars["workload_args"] = sc.workloadArgs
-	}
 	if sc.ssiLanguage != "" {
 		vars["datadog_apm_instrumentation"] = map[string]interface{}{
-			"language":       sc.ssiLanguage,
-			"tracer_version": "latest",
-			"volume_medium":  "MEMORY",
+			"language":          sc.ssiLanguage,
+			"tracer_version":    "latest",
+			"volume_medium":     "MEMORY",
+			"tracer_init_image": cfg.tracerInitImage(sc.ssiLanguage),
 		}
 	}
 	if sc.isFunction {
@@ -281,9 +275,11 @@ func runCloudRunE2E(t *testing.T, cfg config, sc scenario) {
 	}
 	if sc.ssiLanguage != "" {
 		exp.SSI = &SSIExpectations{
-			Language:      sc.ssiLanguage,
-			TracerVersion: "latest",
-			VolumeMedium:  "MEMORY",
+			Language:        sc.ssiLanguage,
+			TracerVersion:   "latest",
+			VolumeMedium:    "MEMORY",
+			ReadyPort:       defaultReadyPort,
+			TracerInitImage: cfg.tracerInitImage(sc.ssiLanguage),
 		}
 	}
 

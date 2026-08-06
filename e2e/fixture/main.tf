@@ -44,8 +44,6 @@ module "datadog" {
         name           = "app"
         image          = var.workload_image
         base_image_uri = var.base_image_uri
-        command        = var.workload_command
-        args           = var.workload_args
         resources = {
           limits = {
             cpu    = "1"

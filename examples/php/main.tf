@@ -12,16 +12,19 @@ module "datadog-cloud-run-v2-php" {
   location            = var.region
   deletion_protection = false
 
-  datadog_api_key             = var.datadog_api_key
-  datadog_apm_instrumentation = var.datadog_apm_instrumentation ? { language = "php" } : null
-  datadog_site                = "datadoghq.com"
-  datadog_service             = "cloud-run-tf-php-example"
-  datadog_version             = "1_0_0"
-  datadog_tags                = ["test:tag-example", "foo:tag-example-2"]
-  datadog_env                 = "serverless"
-  datadog_enable_logging      = true
-  datadog_log_level           = "debug"
-  datadog_logging_path        = "/shared-volume/logs/*.log"
+  datadog_api_key = var.datadog_api_key
+  datadog_apm_instrumentation = var.datadog_apm_instrumentation ? {
+    language          = "php"
+    tracer_init_image = "us-docker.pkg.dev/datadog-serverless-gcp-dev/gcr.io/test-dd-lib-php-init:test-probe"
+  } : null
+  datadog_site           = "datadoghq.com"
+  datadog_service        = "cloud-run-tf-php-example"
+  datadog_version        = "1_0_0"
+  datadog_tags           = ["test:tag-example", "foo:tag-example-2"]
+  datadog_env            = "serverless"
+  datadog_enable_logging = true
+  datadog_log_level      = "debug"
+  datadog_logging_path   = "/shared-volume/logs/*.log"
   datadog_shared_volume = {
     name       = "dd-shared-volume"
     mount_path = "/shared-volume"

@@ -94,6 +94,19 @@ The following Datadog variables can be set for sidecar:
 | `DD_LOG_LEVEL`                    | (Optional) Controls log verbosity in Cloud Run logs (`TRACE`, `DEBUG`, `INFO`, etc.). | Set via `datadog_log_level`.                                                       |
 | Other agent environment variables | For advanced agent configuration. Avoid overriding any of the above variables.        | Set via `datadog_sidecar.env_vars`.                                                     |
 
+#### Auto-instrumentation (`datadog_apm_instrumentation`)
+
+Setting `datadog_apm_instrumentation` adds a `tracer-sidecar-<language>` container that
+copies the tracer into a shared volume. and makes your app containers wait for it with
+`depends_on`. Cloud Run releases a dependent container once the container it depends on
+passes its startup probe, so the copy has to end with something listening on a port:
+`ready_port` (default `5100`).
+
+
+`ready_port` must not collide with `datadog_sidecar.health_port` or any app container port,
+since all containers in an instance share a network namespace.
+
+
 #### Transitioning from resource to module
 
 If you've an established resource instrumentation but would like to switch to the module instead:
@@ -181,7 +194,7 @@ No modules.
 | <a name="input_client_version"></a> [client\_version](#input\_client\_version) | Arbitrary version identifier for the API client. | `string` | `null` | no |
 | <a name="input_custom_audiences"></a> [custom\_audiences](#input\_custom\_audiences) | One or more custom audiences that you want this service to support. Specify each custom audience as the full URL in a string. The custom audiences are encoded in the token and used to authenticate requests.<br/>For more information, see https://cloud.google.com/run/docs/configuring/custom-audiences. | `list(string)` | `null` | no |
 | <a name="input_datadog_api_key"></a> [datadog\_api\_key](#input\_datadog\_api\_key) | Datadog API key | `string` | n/a | yes |
-| <a name="input_datadog_apm_instrumentation"></a> [datadog\_apm\_instrumentation](#input\_datadog\_apm\_instrumentation) | Enables auto-instrumentation via a tracer sidecar.<br/><br/>- language - Tracer language. One of 'java', 'python', 'js', 'dotnet', 'php', 'ruby'.<br/>- tracer\_version - Tag of the dd-lib-<language>-init image to copy the tracer from.<br/>- volume\_medium - Backing medium for the tracer volume. One of 'MEMORY' or 'DISK'.<br/>- command - Workload startup command. The module wraps it to wait for the tracer<br/>  copy-finished marker before exec'ing it, so it cannot be read from the image.<br/>  Falls back to the container's own `command`/`args`, then to a per-language default.<br/>- args - Workload startup arguments, resolved together with `command`. | <pre>object({<br/>    language       = string<br/>    tracer_version = optional(string, "latest")<br/>    volume_medium  = optional(string, "MEMORY")<br/>    command        = optional(list(string))<br/>    args           = optional(list(string))<br/>  })</pre> | `null` | no |
+| <a name="input_datadog_apm_instrumentation"></a> [datadog\_apm\_instrumentation](#input\_datadog\_apm\_instrumentation) | Enables auto-instrumentation via a tracer sidecar.<br/><br/>- language - Tracer language. One of 'java', 'python', 'js', 'dotnet', 'php', 'ruby'.<br/>- tracer\_version - Tag of the dd-lib-<language>-init image to copy the tracer from. Ignored<br/>  when tracer\_init\_image is set.<br/>- tracer\_init\_image - Full image reference to copy the tracer from, replacing the<br/>  gcr.io/datadoghq/dd-lib-<language>-init default. Needed until the published tags ship<br/>  /datadog-init/probe-server: point it at an Artifact Registry mirror of an image that does,<br/>  since Cloud Run cannot pull from an authenticated third-party registry.<br/>- volume\_medium - Backing medium for the tracer volume. One of 'MEMORY' or 'DISK'.<br/>- ready\_port - Port the tracer sidecar listens on once the copy is verified. Must not<br/>  collide with the agent sidecar health port or any app container port, since containers in<br/>  an instance share a network namespace. | <pre>object({<br/>    language          = string<br/>    tracer_version    = optional(string, "latest")<br/>    tracer_init_image = optional(string)<br/>    volume_medium     = optional(string, "MEMORY")<br/>    ready_port        = optional(number, 5100)<br/>  })</pre> | `null` | no |
 | <a name="input_datadog_enable_logging"></a> [datadog\_enable\_logging](#input\_datadog\_enable\_logging) | Enables log collection. Defaults to true. | `bool` | `true` | no |
 | <a name="input_datadog_env"></a> [datadog\_env](#input\_datadog\_env) | Datadog Environment tag, used for Unified Service Tagging. | `string` | `null` | no |
 | <a name="input_datadog_log_level"></a> [datadog\_log\_level](#input\_datadog\_log\_level) | Datadog agent's level of log output in Cloud Run UI, from most to least output: TRACE, DEBUG, INFO, WARN, ERROR, CRITICAL | `string` | `null` | no |

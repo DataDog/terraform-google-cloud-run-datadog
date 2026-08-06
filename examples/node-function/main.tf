@@ -14,12 +14,9 @@ module "datadog-cloud-run-v2-node" {
   client              = "terraform"
 
   datadog_api_key = var.datadog_api_key
-  # The functions framework entrypoint differs from the default for "js", so it is
-  # set here for the module's SSI startup wrapper.
   datadog_apm_instrumentation = var.datadog_apm_instrumentation ? {
-    language = "js"
-    command  = ["npx"]
-    args     = ["functions-framework", "--target=helloHttp"]
+    language          = "js"
+    tracer_init_image = "us-docker.pkg.dev/datadog-serverless-gcp-dev/gcr.io/test-dd-lib-js-init:test-probe"
   } : null
   datadog_site           = "datadoghq.com"
   datadog_service        = var.name

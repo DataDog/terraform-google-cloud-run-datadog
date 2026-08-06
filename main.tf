@@ -10,6 +10,16 @@ locals {
   apm_enabled              = var.datadog_apm_instrumentation != null
   using_disk_medium        = local.apm_enabled && var.datadog_apm_instrumentation.volume_medium == "DISK"
   injection_mode_tag       = "_dd.injection.mode:serverless-single-lang"
+  tracer_sidecar_name = local.apm_enabled ? (
+    "tracer-sidecar-${var.datadog_apm_instrumentation.language}"
+  ) : null
+
+  tracer_ready_probe = local.apm_enabled ? {
+    tcp_socket        = { port = var.datadog_apm_instrumentation.ready_port }
+    period_seconds    = 1
+    timeout_seconds   = 1
+    failure_threshold = 120
+  } : null
   # Matches $REPO in dd-lib-*-init copy-lib.sh (marker: $TARGET_PATH/.$REPO-copy-finished).
   tracer_repo_name = local.apm_enabled ? ({
     java   = "dd-trace-java"
@@ -20,6 +30,8 @@ locals {
     php    = "dd-trace-php"
   })[var.datadog_apm_instrumentation.language] : null
   tracer_copy_finished_marker = local.apm_enabled ? "${local.tracer_volume_mount_path}/.${local.tracer_repo_name}-copy-finished" : null
+  # Listener server to mark when copy is done
+  tracer_probe_server = "/datadog-init/probe-server"
   # Native env vars for Single-Language SSI (mirrors admission-controller lib injection).
   apm_env_map = {
     java = {
@@ -54,38 +66,6 @@ locals {
     var.datadog_apm_instrumentation.language,
     {},
   ) : {}
-
-  # Startup command the SSI wait wrapper execs. These mirror the
-  # conventional entrypoint for each runtime.
-  apm_default_startup = {
-    java   = { command = ["java", "-jar"], args = ["app.jar"] }
-    js     = { command = ["node"], args = ["index.js"] }
-    python = { command = ["python"], args = ["app.py"] }
-    dotnet = { command = ["dotnet"], args = ["dotnet.dll"] }
-    ruby   = { command = ["bundle", "exec", "ruby"], args = ["app.rb"] }
-    php    = { command = ["apache2-foreground"], args = [] }
-  }
-
-  # Resolved as a pair so command and args never come from different sources.
-  apm_startup_override = local.apm_enabled && try(
-    var.datadog_apm_instrumentation.command != null || var.datadog_apm_instrumentation.args != null,
-    false,
-    ) ? {
-    command = coalesce(var.datadog_apm_instrumentation.command, [])
-    args    = coalesce(var.datadog_apm_instrumentation.args, [])
-  } : null
-
-  apm_container_startup = [
-    for container in local.containers_without_sidecar : (
-      !local.apm_enabled ? { command = [], args = [] } : (
-        local.apm_startup_override != null ? local.apm_startup_override : (
-          length(concat(coalesce(container.command, []), coalesce(container.args, []))) > 0
-          ? { command = coalesce(container.command, []), args = coalesce(container.args, []) }
-          : lookup(local.apm_default_startup, var.datadog_apm_instrumentation.language, { command = [], args = [] })
-        )
-      )
-    )
-  ]
 
   # Base env vars the module always owns
   module_controlled_env_vars = concat(
@@ -178,19 +158,25 @@ locals {
       startup_probe = merge(var.datadog_sidecar.startup_probe, { tcp_socket = { port = var.datadog_sidecar.health_port } })
     },
   )
+  // TODO remove this once theres an official release init image with probe-server
+  tracer_init_image = local.apm_enabled ? coalesce(
+    var.datadog_apm_instrumentation.tracer_init_image,
+    "gcr.io/datadoghq/dd-lib-${var.datadog_apm_instrumentation.language}-init:${var.datadog_apm_instrumentation.tracer_version}",
+  ) : null
+  tracer_volume_mount = {
+    name       = local.tracer_volume_name
+    mount_path = local.tracer_volume_mount_path
+  }
+
   tracer_sidecar = local.apm_enabled ? {
-    image   = "gcr.io/datadoghq/dd-lib-${var.datadog_apm_instrumentation.language}-init:${var.datadog_apm_instrumentation.tracer_version}"
-    name    = "tracer-sidecar-${var.datadog_apm_instrumentation.language}"
+    image   = local.tracer_init_image
+    name    = local.tracer_sidecar_name
     command = ["sh", "-c"]
-    # Copy tracer libs into the shared volume, then idle. 
-    # App containers wait on the copy-finished marker
     args = [
-      "/datadog-init/copy-lib.sh ${local.tracer_volume_mount_path} && while true; do :; done",
+      "/datadog-init/copy-lib.sh ${local.tracer_volume_mount_path} && [ -f '${local.tracer_copy_finished_marker}' ] && exec ${local.tracer_probe_server} ${var.datadog_apm_instrumentation.ready_port}; echo 'datadog: tracer copy did not finish, not opening ${var.datadog_apm_instrumentation.ready_port}' >&2; exit 1",
     ]
-    volume_mounts = [{
-      name       = local.tracer_volume_name
-      mount_path = local.tracer_volume_mount_path
-    }]
+    volume_mounts = [local.tracer_volume_mount]
+    startup_probe = local.tracer_ready_probe
   } : null
 }
 
@@ -229,14 +215,21 @@ check "function_target_is_provided" {
   }
 }
 
-check "ssi_requires_resolvable_startup_command" {
+check "ready_port_is_not_already_in_use" {
   assert {
-    # No-op when datadog_apm_instrumentation is null (SSI disabled).
-    condition = !local.apm_enabled || alltrue([
-      for startup in local.apm_container_startup :
-      length(concat(startup.command, startup.args)) > 0
-    ])
-    error_message = "When datadog_apm_instrumentation is set, the module must know how to start the workload so it can wrap startup to wait for the tracer copy-finished marker. Set command and/or args on datadog_apm_instrumentation, or on each template.containers entry."
+    # Containers in an instance share a network namespace, so the readiness port must not
+    # be claimed by the agent sidecar or by an app container.
+    condition = !local.apm_enabled || !contains(
+      concat(
+        [var.datadog_sidecar.health_port],
+        [
+          for c in local.containers_without_sidecar : c.ports.container_port
+          if try(c.ports.container_port, null) != null
+        ],
+      ),
+      var.datadog_apm_instrumentation.ready_port,
+    )
+    error_message = "datadog_apm_instrumentation.ready_port (${try(var.datadog_apm_instrumentation.ready_port, "null")}) is already used by datadog_sidecar.health_port or a template.containers port. All containers in a Cloud Run instance share one network namespace, so the tracer readiness signal needs a port of its own."
   }
 }
 
@@ -251,7 +244,7 @@ locals {
 
   # Update the environments on the containers
   template_containers = concat(
-    [for idx, container in local.containers_without_sidecar :
+    [for container in local.containers_without_sidecar :
       merge(
         container,
         {
@@ -281,20 +274,13 @@ locals {
             }] : [],
             [for vm in coalesce(container.volume_mounts, []) : vm if contains(local.filtered_volume_mounts, vm)],
           )
+          # When SSI is enabled, Cloud Run start ordering holds the container until the
+          # readiness startup probe passes, so the image entrypoint is left untouched.
+          depends_on = local.apm_enabled ? distinct(concat(
+            coalesce(container.depends_on, []),
+            [local.tracer_sidecar_name],
+          )) : container.depends_on
         },
-        # When SSI is enabled, wrap startup to wait for copy-lib's marker before exec'ing
-        # the container command/args
-        local.apm_enabled ? {
-          command = ["sh", "-c"]
-          args = concat(
-            [
-              "while [ ! -f '${local.tracer_copy_finished_marker}' ]; do sleep 0.1 2>/dev/null || :; done; exec \"$@\"",
-              "dd-ssi-wait",
-            ],
-            local.apm_container_startup[idx].command,
-            local.apm_container_startup[idx].args,
-          )
-        } : {},
     )],
     # We add the sidecar at the end due to an issue where cloud sql mounts are always
     # assigned to the first container (assuming it is the main app), so we should preserve
