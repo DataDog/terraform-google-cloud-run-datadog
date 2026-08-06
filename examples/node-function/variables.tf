@@ -20,7 +20,7 @@ variable "region" {
 variable "name" {
   type        = string
   description = "The name of the Cloud Run service"
-  default     = "cloud-run-tf-example"
+  default     = "cloud-run-tf-example-node-function"
   nullable    = false
 }
 
