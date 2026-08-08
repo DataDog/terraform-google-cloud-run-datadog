@@ -267,7 +267,9 @@ func runCloudRunE2E(t *testing.T, cfg config, sc scenario) {
 }
 
 // prepareFixtureDir copies e2e/fixture into a unique temp dir and rewrites the
-// module source to an absolute path so parallel subtests do not share state.
+// module source to a path relative to that copy so parallel subtests do not
+// share state. Terraform local module sources must start with ./ or ../;
+// absolute paths are treated as remote packages and are not used here.
 func prepareFixtureDir(t *testing.T) string {
 	t.Helper()
 
@@ -277,6 +279,16 @@ func prepareFixtureDir(t *testing.T) string {
 	require.NoError(t, err, "resolve module root")
 
 	dstDir := t.TempDir()
+	relSource, err := filepath.Rel(dstDir, moduleRoot)
+	require.NoError(t, err, "relative module source from fixture copy")
+	relSource = filepath.ToSlash(relSource)
+	switch {
+	case relSource == ".":
+		relSource = "./"
+	case !strings.HasPrefix(relSource, "../") && !strings.HasPrefix(relSource, "./"):
+		relSource = "./" + relSource
+	}
+
 	entries, err := os.ReadDir(srcDir)
 	require.NoError(t, err, "read fixture dir")
 	for _, ent := range entries {
@@ -289,11 +301,10 @@ func prepareFixtureDir(t *testing.T) string {
 		data, err := os.ReadFile(srcPath)
 		require.NoError(t, err, "read %s", srcPath)
 		if name == "main.tf" {
-			// Keep relative source working when the copy is not under e2e/fixture.
 			data = []byte(strings.Replace(
 				string(data),
 				`source              = "../../"`,
-				`source              = "`+filepath.ToSlash(moduleRoot)+`"`,
+				`source              = "`+relSource+`"`,
 				1,
 			))
 		}
