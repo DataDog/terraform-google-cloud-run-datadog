@@ -6,17 +6,18 @@ runtime under [`examples/`](../examples): `go`, `node`, `python`, `ruby`, `php`,
 
 ## Run locally
 
+
 You need Go, Terraform, Docker, `gcloud`, Google Application Default Credentials
 with permission to manage Cloud Run / Artifact Registry / Cloud Build and grant
 the Cloud Run Invoker role, and a Datadog account that can create API and
-application keys.
+application keys. 
+Ensure GCP_PROJECT_ID, GCP_REGION, and DD_SITE are set in the environment.
 
 ```bash
+gcloud auth login
 gcloud auth application-default login
-gcloud auth configure-docker us-central1-docker.pkg.dev
-
-export GCP_PROJECT_ID=datadog-serverless-gcp-dev   # optional override
-export GCP_REGION=us-central1                      # optional override
+gcloud config set project "$GCP_PROJECT_ID"
+gcloud auth configure-docker "${GCP_REGION}-docker.pkg.dev"
 
 # 1) Build + push workload images from examples/*/src (writes e2e/.image-env)
 ./e2e/build_images.sh
@@ -24,7 +25,7 @@ export GCP_REGION=us-central1                      # optional override
 # 2) Run the suite
 cd e2e
 set -a; source .image-env; set +a
-dd-auth --domain ddserverless.datadoghq.com -- go test -count=1 -v -timeout 120m ./...
+dd-auth --domain "$DD_SITE" -- go test -count=1 -v -timeout 120m ./...
 ```
 
 Run a single live scenario (after sourcing `.image-env`):
