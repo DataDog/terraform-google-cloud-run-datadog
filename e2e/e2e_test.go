@@ -277,8 +277,11 @@ func prepareFixtureDir(t *testing.T) string {
 	require.NoError(t, err, "resolve fixture dir")
 	moduleRoot, err := filepath.Abs("..")
 	require.NoError(t, err, "resolve module root")
+	moduleRoot, err = filepath.EvalSymlinks(moduleRoot)
+	require.NoError(t, err, "resolve module root symlinks")
 
-	dstDir := t.TempDir()
+	dstDir, err := filepath.EvalSymlinks(t.TempDir())
+	require.NoError(t, err, "resolve fixture temp dir symlinks")
 	relSource, err := filepath.Rel(dstDir, moduleRoot)
 	require.NoError(t, err, "relative module source from fixture copy")
 	relSource = filepath.ToSlash(relSource)
