@@ -5,6 +5,8 @@
     "fields": {
         "impl": [
             "labels",
+            "launch_stage",
+            "scaling",
             "template.containers",
             "template.volumes"
         ],
@@ -12,6 +14,9 @@
             "project",
             "ingress",
             "launch_stage",
+            "scaling.max_instance_count",
+            "scaling.min_instance_count",
+            "scaling.manual_instance_count",
             "template.containers.liveness_probe.grpc.port",
             "template.containers.liveness_probe.http_get.port",
             "template.containers.startup_probe.grpc.port",

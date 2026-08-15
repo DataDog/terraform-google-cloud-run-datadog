@@ -144,6 +144,64 @@ Datadog sidecar configuration. Nested attributes include:
 - resources - Resources like for any cloud run container.
 - startup_probe - Startup probe settings only for failure_threshold, initial_delay_seconds, period_seconds, timeout_seconds.
 - health_port - Health port to start the startup probe.
-- env_vars - List of environment variables with name and value fieldsfor customizing Datadog agent configuration, if any.
+- env_vars - List of environment variables with name and value fields for customizing Datadog agent configuration, if any.
 DESCRIPTION
+}
+
+variable "datadog_apm_instrumentation" {
+  type = object({
+    language       = string
+    tracer_version = optional(string, "latest")
+
+    // TODO remove once the official init image with probe server is released
+    tracer_init_image = optional(string)
+    volume_medium     = optional(string, "MEMORY")
+    ready_port        = optional(number, 5100)
+  })
+  description = <<-DESCRIPTION
+Enables auto-instrumentation via a tracer sidecar.
+
+- language - Tracer language. One of 'java', 'python', 'js', 'dotnet', 'php', 'ruby'.
+- tracer_version - Tag of the dd-lib-<language>-init image to copy the tracer from. Ignored
+  when tracer_init_image is set.
+- tracer_init_image - Full image reference to copy the tracer from, replacing the
+  gcr.io/datadoghq/dd-lib-<language>-init default. Needed until the published tags ship
+  /datadog-init/probe-server: point it at an Artifact Registry mirror of an image that does,
+  since Cloud Run cannot pull from an authenticated third-party registry.
+- volume_medium - Backing medium for the tracer volume. One of 'MEMORY' or 'DISK'.
+- ready_port - Port the tracer sidecar listens on once the copy is verified. Must not
+  collide with the agent sidecar health port or any app container port, since containers in
+  an instance share a network namespace.
+DESCRIPTION
+  validation {
+    condition = var.datadog_apm_instrumentation == null ? true : contains(
+      [
+        "java",
+        "python",
+        "js",
+        "dotnet",
+        "php",
+        "ruby",
+      ],
+      var.datadog_apm_instrumentation.language,
+    )
+    error_message = "Invalid language. Valid options are: 'java', 'python', 'js', 'dotnet', 'php', and 'ruby'."
+  }
+
+  validation {
+    condition = var.datadog_apm_instrumentation == null ? true : contains(
+      ["DISK", "MEMORY"],
+      var.datadog_apm_instrumentation.volume_medium,
+    )
+    error_message = "Invalid volume_medium. Valid options are: 'DISK' and 'MEMORY'."
+  }
+
+  validation {
+    condition = var.datadog_apm_instrumentation == null ? true : (
+      var.datadog_apm_instrumentation.ready_port > 1024 &&
+      var.datadog_apm_instrumentation.ready_port <= 65535
+    )
+    error_message = "Invalid ready_port. Must be between 1025 and 65535, since the container that listens on it runs unprivileged."
+  }
+  default = null
 }

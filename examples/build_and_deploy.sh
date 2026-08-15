@@ -38,7 +38,7 @@ fi
 echo "Building and deploying $LANGUAGE application from $PROJECT_PATH"
 
 # Configuration
-PROJECT_ID=${PROJECT_ID:?required but not set}
+PROJECT_ID=${PROJECT_ID:-${TF_VAR_project:?required but not set (PROJECT_ID or TF_VAR_project)}}
 GCP_PROJECT_NAME=${GCP_PROJECT_NAME:?required but not set}
 DD_SERVICE=${DD_SERVICE:?required but not set}
 REPO_NAME=${REPO_NAME:?required but not set}
@@ -60,4 +60,4 @@ docker push ${IMAGE_NAME}
 echo -e "\n====== Deploying to Cloud Run using terraform ======"
 cd "../"
 terraform init
-terraform apply -auto-approve
+terraform apply -auto-approve -var="image=${IMAGE_NAME}"

@@ -25,6 +25,13 @@ variable "workload_image" {
   nullable    = false
 }
 
+variable "workload_memory" {
+  type        = string
+  description = "Memory limit for the workload container. Raised for JVM workloads, which need more headroom than the scripting runtimes."
+  default     = "512Mi"
+  nullable    = false
+}
+
 variable "sidecar_image" {
   type        = string
   description = "Datadog serverless-init sidecar image, pinned by digest so failures blame the module, not upstream."
@@ -60,6 +67,34 @@ variable "datadog_version" {
   type        = string
   description = "Unified Service Tagging version tag asserted on ingested telemetry."
   nullable    = false
+}
+
+variable "datadog_apm_instrumentation" {
+  type = object({
+    language          = string
+    tracer_version    = optional(string, "latest")
+    volume_medium     = optional(string, "MEMORY")
+    tracer_init_image = optional(string)
+  })
+  description = "When set, enables Single-Language SSI (tracer sidecar + language env injection)."
+  default     = null
+}
+
+variable "build_config" {
+  type = object({
+    function_target          = string
+    image_uri                = optional(string)
+    base_image               = optional(string)
+    enable_automatic_updates = optional(bool)
+  })
+  description = "When set, configures Cloud Run Functions build_config (used by the node-function example)."
+  default     = null
+}
+
+variable "base_image_uri" {
+  type        = string
+  description = "Optional base_image_uri for the workload container (Cloud Run Functions)."
+  default     = null
 }
 
 variable "run_id" {
