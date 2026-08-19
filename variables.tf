@@ -144,6 +144,101 @@ Datadog sidecar configuration. Nested attributes include:
 - resources - Resources like for any cloud run container.
 - startup_probe - Startup probe settings only for failure_threshold, initial_delay_seconds, period_seconds, timeout_seconds.
 - health_port - Health port to start the startup probe.
-- env_vars - List of environment variables with name and value fieldsfor customizing Datadog agent configuration, if any.
+- env_vars - List of environment variables with name and value fields for customizing Datadog agent configuration, if any.
 DESCRIPTION
+}
+
+variable "datadog_apm_instrumentation" {
+  type = object({
+    language       = string
+    tracer_version = optional(string, "latest")
+    tracer_libc    = optional(string, "glibc")
+    ready_port     = optional(number, 18999)
+  })
+  description = <<-DESCRIPTION
+Enables auto-instrumentation via a tracer sidecar.
+
+- language - Tracer language. One of 'java', 'python', 'js', 'dotnet', 'php', 'ruby'.
+- tracer_version - Tag of the dd-lib-<language>-init image to copy the tracer from. Pinned tags
+  must be above java 1.65.1, js 6.10.0, python 4.13.0, dotnet 3.51.1, ruby 2.41.0, php 1.23.3
+  For 'dotnet', pinned major versions below 3 are unsupported.
+- tracer_libc - C library ABI of the application image: 'glibc' (default) or 'musl'.
+  Selects the PHP loader path; Ruby does not support musl.
+- ready_port - Port the tracer sidecar listens on once the copy is verified. Must not
+  collide with the agent sidecar health port or any app container port, since containers in
+  an instance share a network namespace.
+DESCRIPTION
+  validation {
+    condition = var.datadog_apm_instrumentation == null ? true : contains(
+      [
+        "java",
+        "python",
+        "js",
+        "dotnet",
+        "php",
+        "ruby",
+      ],
+      var.datadog_apm_instrumentation.language,
+    )
+    error_message = "Invalid language. Valid options are: 'java', 'python', 'js', 'dotnet', 'php', and 'ruby'."
+  }
+
+  validation {
+    condition = var.datadog_apm_instrumentation == null ? true : contains(
+      ["glibc", "musl"],
+      var.datadog_apm_instrumentation.tracer_libc,
+    )
+    error_message = "Invalid tracer_libc. Valid options are: 'glibc' and 'musl'."
+  }
+
+  validation {
+    condition = var.datadog_apm_instrumentation == null ? true : !(
+      var.datadog_apm_instrumentation.language == "ruby" &&
+      var.datadog_apm_instrumentation.tracer_libc == "musl"
+    )
+    error_message = "Ruby Single-Language SSI does not support musl. Use tracer_libc = \"glibc\", or instrument Ruby another way."
+  }
+
+  validation {
+    # pinned .NET tracer majors below 3 use incompatible arch-specific paths.
+    # Unpinned tags such as "latest" are allowed.
+    condition = var.datadog_apm_instrumentation == null ? true : (
+      var.datadog_apm_instrumentation.language != "dotnet" ? true : try(
+        tonumber(regex("^v?(\\d+)(?:\\.|$)", var.datadog_apm_instrumentation.tracer_version)[0]) >= 3,
+        true,
+      )
+    )
+    error_message = "Unsupported .NET tracer_version: versions before 3.0 require architecture-specific package paths. Use tracer_version \"latest\" or a 3.x+ tag."
+  }
+
+  validation {
+    # ensure selected tracer version is compatible. Older versions dont include probe-server in dd-lib-*-init image which is required for ssi
+    condition = var.datadog_apm_instrumentation == null ? true : try(
+      sum([
+        for index, part in regex("^v?(\\d+)\\.(\\d+)\\.(\\d+)$", var.datadog_apm_instrumentation.tracer_version) :
+        tonumber(part) * pow(1000, 2 - index)
+        ]) > sum([
+        for index, part in regex("^(\\d+)\\.(\\d+)\\.(\\d+)$", {
+          java   = "1.65.1"
+          js     = "6.10.0"
+          python = "4.13.0"
+          dotnet = "3.51.1"
+          ruby   = "2.41.0"
+          php    = "1.23.3"
+        }[var.datadog_apm_instrumentation.language]) :
+        tonumber(part) * pow(1000, 2 - index)
+      ]),
+      true,
+    )
+    error_message = "Unsupported tracer_version. Use tracer_version \"latest\", or a tag above java 1.65.1, js 6.10.0, python 4.13.0, dotnet 3.51.1, ruby 2.41.0, php 1.23.3."
+  }
+
+  validation {
+    condition = var.datadog_apm_instrumentation == null ? true : (
+      var.datadog_apm_instrumentation.ready_port >= 1024 &&
+      var.datadog_apm_instrumentation.ready_port <= 65535
+    )
+    error_message = "Invalid ready_port. Must be between 1024 and 65535, since the container that listens on it runs unprivileged."
+  }
+  default = null
 }
