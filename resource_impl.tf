@@ -144,16 +144,22 @@ resource "google_cloud_run_v2_service" "this" {
         dynamic "readiness_probe" {
           for_each = try(containers.value.readiness_probe, null) != null ? [true] : []
           content {
+            failure_threshold = try(containers.value.readiness_probe.failure_threshold, null)
+            period_seconds    = try(containers.value.readiness_probe.period_seconds, null)
+            success_threshold = try(containers.value.readiness_probe.success_threshold, null)
+            timeout_seconds   = try(containers.value.readiness_probe.timeout_seconds, null)
             dynamic "grpc" {
               for_each = try(containers.value.readiness_probe.grpc, null) != null ? [true] : []
               content {
+                port    = try(containers.value.readiness_probe.grpc.port, null)
                 service = try(containers.value.readiness_probe.grpc.service, null)
               }
             }
             dynamic "http_get" {
               for_each = try(containers.value.readiness_probe.http_get, null) != null ? [true] : []
               content {
-
+                path = try(containers.value.readiness_probe.http_get.path, null)
+                port = try(containers.value.readiness_probe.http_get.port, null)
               }
             }
           }
