@@ -1,9 +1,13 @@
 # Unless explicitly stated otherwise all files in this repository are licensed under the Apache-2.0 License.
 # This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2025 Datadog, Inc.
 
-source 'https://rubygems.org'
+terraform {
+  required_version = ">= 1.5.0"
 
-gem 'railties', '~> 8.1'
-gem 'actionpack', '~> 8.1'
-gem 'puma', '~> 8.0'
-gem 'datadog', require: 'datadog/auto_instrument'
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = ">= 6.34.0"
+    }
+  }
+}

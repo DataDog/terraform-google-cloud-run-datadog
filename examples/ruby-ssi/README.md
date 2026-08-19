@@ -1,10 +1,14 @@
-# Example: Deploying an Instrumented Ruby Cloud Run Service with Datadog
+# Example: Deploying an Instrumented Ruby Cloud Run Service with Datadog SSI
 
 This example demonstrates a step-by-step on how to use the `terraform-google-cloud-run-datadog` wrapper module to fully instrument a sample Ruby service with logs, metrics, and tracing using Datadog.
 
-The tracer instruments applications through a railtie, so the sample app is a minimal Rails application — Sinatra and other non-railtie frameworks get no request spans. The `Gemfile` pulls the tracer in as `gem 'datadog', require: 'datadog/auto_instrument'`, so `Bundler.require` loads it after Rails and it can attach to the railtie.
+Instrumentation here comes from Single-Language Serverless Instrumentation (SSI): `datadog_apm_instrumentation` makes the module run a tracer sidecar that stages the Ruby tracer on a shared volume and sets `RUBYOPT` for the app container. The app itself contains no Datadog code and no `datadog` gem — trace and span IDs still show up in its logs because the injected tracer adds them.
 
-For the variant that lets the module inject the tracer instead of baking it into the image, see [`examples/ruby-ssi`](../ruby-ssi).
+The injected tracer is added to the app's bundle rather than required directly, so the app only picks it up if it boots through `Bundler.require` and exposes a railtie for the tracer to hook into. That is why the sample app is a Rails application — Sinatra and other non-railtie frameworks get no request spans — and why it starts with `bin/rails server` instead of `bundle exec`, which would reset the `BUNDLE_GEMFILE` the tracer was added to.
+
+`src/` is a hand-written minimal Rails app rather than a `rails new` scaffold: a `Gemfile` on `railties` and `actionpack`, the files Rails needs to boot (`config/boot.rb`, `config/application.rb`, `config/environment.rb`, `config.ru`, `bin/rails`), one controller, one route, and `config/initializers/logging.rb`, which mirrors the Rails log into the shared volume the sidecar tails.
+
+For the variant that installs the tracer in the image instead, see [`examples/ruby`](../ruby).
 
 ## Steps to Deploy
 Create a [Datadog API Key](https://app.datadoghq.com/organization-settings/api-keys)
@@ -76,7 +80,7 @@ Your Ruby service is now fully instrumented with the Datadog sidecar agent. Trac
 |------|-------------|------|---------|:--------:|
 | <a name="input_datadog_api_key"></a> [datadog\_api\_key](#input\_datadog\_api\_key) | The api key for datadog | `string` | n/a | yes |
 | <a name="input_image"></a> [image](#input\_image) | The image to deploy the service to | `string` | `"us-docker.pkg.dev/cloudrun/container/hello"` | no |
-| <a name="input_name"></a> [name](#input\_name) | The name of the Cloud Run service | `string` | `"cloud-run-tf-example-ruby"` | no |
+| <a name="input_name"></a> [name](#input\_name) | The name of the Cloud Run service | `string` | `"cloud-run-tf-example-ruby-ssi"` | no |
 | <a name="input_project"></a> [project](#input\_project) | The project ID to deploy the service to | `string` | n/a | yes |
 | <a name="input_region"></a> [region](#input\_region) | The region to deploy the service to (used in example for both google provider region and cloud run resource location) | `string` | n/a | yes |
 

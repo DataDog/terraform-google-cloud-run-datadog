@@ -7,7 +7,7 @@
 # Usage: ./build_and_deploy.sh <language>
 # Example: ./build_and_deploy.sh go
 
-set -auo pipefail
+set -aeuo pipefail
 
 if ! command -v terraform &> /dev/null; then
     echo "Error: terraform command not found. Please install Terraform."
@@ -38,12 +38,14 @@ fi
 echo "Building and deploying $LANGUAGE application from $PROJECT_PATH"
 
 # Configuration
-PROJECT_ID=${PROJECT_ID:?required but not set}
+PROJECT_ID=${PROJECT_ID:-${TF_VAR_project:?required but not set (PROJECT_ID or TF_VAR_project)}}
 GCP_PROJECT_NAME=${GCP_PROJECT_NAME:?required but not set}
 DD_SERVICE=${DD_SERVICE:?required but not set}
 REPO_NAME=${REPO_NAME:?required but not set}
 REGION=${REGION:-us-central1}
-IMAGE_NAME="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${GCP_PROJECT_NAME}:latest"
+
+IMAGE_REPO="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${GCP_PROJECT_NAME}-${LANGUAGE}"
+IMAGE_NAME="${IMAGE_REPO}:$(date -u +%Y%m%d-%H%M%S)"
 
 # Build
 echo -e "\n====== Initializing ======"
@@ -53,11 +55,13 @@ gcloud config set project ${PROJECT_ID}
 gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
 
 echo -e "\n====== Building Docker image ======"
-docker build --quiet --platform linux/amd64 -t ${IMAGE_NAME} .
-docker push ${IMAGE_NAME}
+docker build --platform linux/amd64 --load -t "${IMAGE_NAME}" .
+docker push "${IMAGE_NAME}"
 
 # Deploy to Cloud Run
 echo -e "\n====== Deploying to Cloud Run using terraform ======"
+IMAGE_DIGEST="$(docker image inspect --format='{{index .RepoDigests 0}}' "${IMAGE_NAME}")"
+echo "Deploying ${IMAGE_DIGEST}"
 cd "../"
 terraform init
-terraform apply -auto-approve
+terraform apply -auto-approve -var="image=${IMAGE_DIGEST}"
