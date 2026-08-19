@@ -1,9 +1,13 @@
 # Unless explicitly stated otherwise all files in this repository are licensed under the Apache-2.0 License.
 # This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2025 Datadog, Inc.
 
-source 'https://rubygems.org'
+FROM python:3.13-slim
 
-gem 'railties', '~> 8.1'
-gem 'actionpack', '~> 8.1'
-gem 'puma', '~> 8.0'
-gem 'datadog', require: 'datadog/auto_instrument'
+WORKDIR /app/
+
+COPY requirements.txt app.py ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+EXPOSE 8080
+
+CMD ["python", "app.py"]
