@@ -40,6 +40,8 @@ build
 target
 bin
 obj
+# Rails binstubs in the Ruby examples are app sources, not build output
+!examples/*/src/bin/
 **/.DS_Store
 **/node_modules
 # Ephemeral e2e image env map written by e2e/build_images.sh

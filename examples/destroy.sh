@@ -7,7 +7,7 @@
 # Usage: ./destroy.sh <language>
 # Example: ./destroy.sh go
 
-set -auo pipefail
+set -aeuo pipefail
 
 if ! command -v terraform &> /dev/null; then
     echo "Error: terraform command not found. Please install Terraform."
