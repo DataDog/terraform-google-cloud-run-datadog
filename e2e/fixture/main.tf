@@ -17,14 +17,15 @@ module "datadog" {
   location            = var.region
   deletion_protection = false
 
-  datadog_api_key        = var.datadog_api_key
-  datadog_site           = var.datadog_site
-  datadog_service        = var.datadog_service
-  datadog_env            = var.datadog_env
-  datadog_version        = var.datadog_version
-  datadog_tags           = ["one_e2e_run_id:${var.run_id}"]
-  datadog_enable_logging = true
-  build_config           = var.build_config
+  datadog_api_key             = var.datadog_api_key
+  datadog_site                = var.datadog_site
+  datadog_service             = var.datadog_service
+  datadog_env                 = var.datadog_env
+  datadog_version             = var.datadog_version
+  datadog_tags                = ["one_e2e_run_id:${var.run_id}"]
+  datadog_enable_logging      = true
+  datadog_apm_instrumentation = var.datadog_apm_instrumentation
+  build_config                = var.build_config
 
   # Pin the sidecar artifact by digest so an upstream serverless-init change
   # never turns into a red e2e run for this module.
