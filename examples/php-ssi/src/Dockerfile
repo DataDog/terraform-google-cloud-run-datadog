@@ -16,11 +16,6 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Create Laravel project
 RUN composer create-project laravel/laravel . --no-dev
 
-# Install Datadog tracer
-RUN curl -fLO --retry 5 --retry-delay 2 --retry-connrefused \
-    https://github.com/DataDog/dd-trace-php/releases/latest/download/datadog-setup.php \
-    && php datadog-setup.php --php-bin=all
-
 ENV PORT=8080
 EXPOSE 8080
 

@@ -1,10 +1,10 @@
-# Example: Deploying an Instrumented Ruby Cloud Run Service with Datadog
+# Example: Deploying an Instrumented Node.js Cloud Run Function with Datadog SSI
 
-This example demonstrates a step-by-step on how to use the `terraform-google-cloud-run-datadog` wrapper module to fully instrument a sample Ruby service with logs, metrics, and tracing using Datadog.
+This example demonstrates a step-by-step on how to use the `terraform-google-cloud-run-datadog` wrapper module to fully instrument a sample Node.js function with logs, metrics, and tracing using Datadog.
 
-The tracer instruments applications through a railtie, so the sample app is a minimal Rails application — Sinatra and other non-railtie frameworks get no request spans. The `Gemfile` pulls the tracer in as `gem 'datadog', require: 'datadog/auto_instrument'`, so `Bundler.require` loads it after Rails and it can attach to the railtie.
+Instrumentation here comes from Single-Language Serverless Instrumentation (SSI): `datadog_apm_instrumentation` makes the module run a tracer sidecar that stages the Node.js tracer on a shared volume and sets `NODE_OPTIONS` for the app container. Because of that, `dd-trace` is not a dependency of the function.
 
-For the variant that lets the module inject the tracer instead of baking it into the image, see [`examples/ruby-ssi`](../ruby-ssi).
+For the variant that installs the tracer in the image instead, see [`examples/node-function`](../node-function).
 
 ## Steps to Deploy
 Create a [Datadog API Key](https://app.datadoghq.com/organization-settings/api-keys)
@@ -13,7 +13,7 @@ Create a [Datadog API Key](https://app.datadoghq.com/organization-settings/api-k
 Create a `terraform.tfvars` file in this directory to configure all variables defined in `variables.tf`.
 You will define your image path after building it in the next step.
 
-### 2. Build a container image out of your service code
+### 2. Build a container image out of your function code
 
 Navigate to the `src/` subdirectory and build + push your application image to your Google Artifact Registry (or Container Registry) using the command line. If you don't have a registry, please go create one.
 
@@ -28,7 +28,8 @@ Make sure you're logged in and have access to push to your registry.
 #### Build the container image
 
 ```
-gcloud builds submit --tag $REGION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/$IMAGE_NAME:latest \
+gcloud builds submit --pack \
+  image=$REGION-docker.pkg.dev/$PROJECT_ID/gcr.io/$IMAGE_NAME:latest,env=GOOGLE_FUNCTION_TARGET=$FUNCTION_TARGET \
   --project $PROJECT_ID
 ```
 
@@ -46,10 +47,9 @@ Initialize and deploy:
 ```
 terraform init
 terraform plan
-terraform apply
+terrafrom apply
 ```
-Your Ruby service is now fully instrumented with the Datadog sidecar agent. Tracing, logging, and metrics will be visible in Datadog Serverless Monitoring.
-
+Your Node.js function is now fully instrumented with the Datadog sidecar agent. Tracing, logging, and metrics will be visible in Datadog Serverless Monitoring.
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
@@ -62,21 +62,21 @@ Your Ruby service is now fully instrumented with the Datadog sidecar agent. Trac
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_datadog-cloud-run-v2-ruby"></a> [datadog-cloud-run-v2-ruby](#module\_datadog-cloud-run-v2-ruby) | ../../ | n/a |
+| <a name="module_datadog-cloud-run-v2-node"></a> [datadog-cloud-run-v2-node](#module\_datadog-cloud-run-v2-node) | ../../ | n/a |
 
 ## Resources
 
 | Name | Type |
 |------|------|
-| [google_cloud_run_service_iam_member.invoker-ruby](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/cloud_run_service_iam_member) | resource |
+| [google_cloud_run_service_iam_member.invoker-node](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/cloud_run_service_iam_member) | resource |
 
 ## Inputs
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_datadog_api_key"></a> [datadog\_api\_key](#input\_datadog\_api\_key) | The api key for datadog | `string` | n/a | yes |
-| <a name="input_image"></a> [image](#input\_image) | The image to deploy the service to | `string` | `"us-docker.pkg.dev/cloudrun/container/hello"` | no |
-| <a name="input_name"></a> [name](#input\_name) | The name of the Cloud Run service | `string` | `"cloud-run-tf-example-ruby"` | no |
+| <a name="input_image"></a> [image](#input\_image) | The image built from the function code | `string` | `"us-docker.pkg.dev/cloudrun/container/hello"` | no |
+| <a name="input_name"></a> [name](#input\_name) | The name of the Cloud Run service | `string` | `"cloud-run-tf-example-node-function-ssi"` | no |
 | <a name="input_project"></a> [project](#input\_project) | The project ID to deploy the service to | `string` | n/a | yes |
 | <a name="input_region"></a> [region](#input\_region) | The region to deploy the service to (used in example for both google provider region and cloud run resource location) | `string` | n/a | yes |
 

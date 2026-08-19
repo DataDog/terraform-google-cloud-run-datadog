@@ -3,7 +3,8 @@
 
 source 'https://rubygems.org'
 
+# The tracer instruments the app through a railtie, so this has to be a Rails
+# app. railties + actionpack is the smallest set that provides one.
 gem 'railties', '~> 8.1'
 gem 'actionpack', '~> 8.1'
 gem 'puma', '~> 8.0'
-gem 'datadog', require: 'datadog/auto_instrument'
