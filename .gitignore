@@ -40,4 +40,7 @@ build
 target
 bin
 obj
-.DS_Store
+**/.DS_Store
+**/node_modules
+# Ephemeral e2e image env map written by e2e/build_images.sh
+e2e/.image-env

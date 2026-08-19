@@ -1,22 +1,55 @@
 # Cloud Run E2E tests
 
+Live instrumentation lifecycle against ephemeral Cloud Run services for every
+runtime under [`examples/`](../examples): `go`, `node`, `python`, `ruby`, `php`,
+`dotnet`, and `node-function`.
+
 ## Run locally
 
-You need Go, Terraform, Google Application Default Credentials with permission to manage Cloud Run and grant the Cloud Run Invoker role, and a Datadog account that can create API and application keys.
+
+You need Go, Terraform, Docker, `gcloud`, Google Application Default Credentials
+with permission to manage Cloud Run / Artifact Registry / Cloud Build and grant
+the Cloud Run Invoker role, and a Datadog account that can create API and
+application keys. 
+Ensure GCP_PROJECT_ID, GCP_REGION, and DD_SITE are set in the environment.
 
 ```bash
+gcloud auth login
 gcloud auth application-default login
+gcloud config set project "$GCP_PROJECT_ID"
+gcloud auth configure-docker "${GCP_REGION}-docker.pkg.dev"
 
+# 1) Build + push workload images from examples/*/src (writes e2e/.image-env)
+./e2e/build_images.sh
+
+# 2) Run the suite
 cd e2e
-dd-auth --domain ddserverless.datadoghq.com -- go test -count=1 -v -timeout 30m ./...
+set -a; source .image-env; set +a
+dd-auth --domain "$DD_SITE" -- go test -count=1 -v -timeout 120m ./...
 ```
 
-The test defaults to `datadog-serverless-gcp-dev` in `us-central1`. Set `GCP_PROJECT_ID` or `GCP_REGION` to override either value.
+Run a single live scenario (after sourcing `.image-env`):
 
-## What the test checks
+```bash
+go test -count=1 -v -timeout 30m -run 'TestCloudRunE2E/python_sidecar' ./...
+```
 
-The test deploys a temporary Cloud Run service, verifies its Datadog configuration and telemetry, confirms Terraform has no further changes, then deletes the service.
+## What the tests check
+
+Each subtest of **TestCloudRunE2E**:
+
+1. Applies the module via `e2e/fixture` (unique Terraform dir per parallel subtest)
+2. Verifies sidecar / shared volume / env / labels
+3. Triggers the service URL and waits for matching Datadog spans + logs
+4. Asserts `terraform plan` is a no-op
+5. Destroys and asserts the service is gone
+
+Workload images are built by [`build_images.sh`](./build_images.sh) into
+`$GCP_REGION-docker.pkg.dev/$GCP_PROJECT_ID/e2e-workloads/<runtime>-<mode>:<tag>`.
+Environment variables look like `E2E_IMAGE_GO_SIDECAR`, `E2E_IMAGE_NODE_SIDECAR`, …
 
 ## CI
 
-[The E2E workflow](../.github/workflows/e2e.yaml) runs when Terraform or E2E files change. It uses short-lived Google Cloud and Datadog credentials.
+[The E2E workflow](../.github/workflows/e2e.yaml) runs when Terraform, e2e, or
+examples files change. It builds images, then runs the matrix with short-lived
+Google Cloud and Datadog credentials.
