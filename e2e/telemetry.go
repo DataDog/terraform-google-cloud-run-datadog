@@ -6,7 +6,7 @@ package e2e
 import (
 	"context"
 	"fmt"
-	"slices"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -14,22 +14,8 @@ import (
 	e2eshared "github.com/DataDog/terraform-google-cloud-run-datadog/e2e/shared"
 )
 
-// checkTelemetryFlowing polls spans and logs in parallel until each surfaces an event
-// matching this run's identity, or the budget is exhausted. It runs on the shared
-// TelemetryClient search primitives but keeps a Cloud-Run-specific match: identity is
-// service + env + run-id marker, deliberately WITHOUT version. The tracer does not
-// reliably stamp version on spans (upstream behaviour), so version is asserted in the
-// config check (the GCP label) rather than on telemetry; using the shared
-// SpanQuery/LogQuery/Identity here would over-assert.
-//
-// The workload is exercised continuously for the duration of the poll. The
-// serverless-init sidecar tails the app's log file from the end (the right choice for
-// ephemeral runtimes, so a restart never replays stale logs), so only lines written
-// after the sidecar attaches its tailer are forwarded. The app boots faster than the
-// agent, so the lines emitted by the up-front trigger already sit behind the tail offset
-// and never ship; without fresh traffic the logs assertion times out even though logging
-// is wired correctly. Spans don't need this -- the tracer pushes them over HTTP
-// immediately, independent of any file offset.
+// checkTelemetryFlowing polls spans and logs in parallel until both surface an event
+// matching this run's identity (service + env + run-id)
 func checkTelemetryFlowing(ctx context.Context, t *testing.T, client *e2eshared.TelemetryClient, serviceName, runID, env, uri string) error {
 	tctx, stopTraffic := context.WithCancel(ctx)
 	defer stopTraffic()
@@ -37,11 +23,12 @@ func checkTelemetryFlowing(ctx context.Context, t *testing.T, client *e2eshared.
 
 	// service + env + run-id marker, no version (see doc comment).
 	query := fmt.Sprintf("service:%s env:%s %s:%s", serviceName, env, e2eshared.DefaultRunIDTagKey, runID)
-	match := func(e e2eshared.Event) bool {
-		return e.Has("service", serviceName) &&
-			e.Has("env", env) &&
-			e.Has(e2eshared.DefaultRunIDTagKey, runID)
+	want := matchWant{
+		Service: serviceName,
+		Env:     env,
+		RunID:   runID,
 	}
+	t.Logf("telemetry query=%q", query)
 
 	type result struct {
 		label string
@@ -49,10 +36,10 @@ func checkTelemetryFlowing(ctx context.Context, t *testing.T, client *e2eshared.
 	}
 	results := make(chan result, 2)
 	go func() {
-		results <- result{"spans", pollUntilMatch(ctx, t, client, "spans", client.SearchSpans, query, match)}
+		results <- result{"spans", pollUntilMatch(ctx, t, "spans", client.SearchSpans, query, want)}
 	}()
 	go func() {
-		results <- result{"logs", pollUntilMatch(ctx, t, client, "logs", client.SearchLogs, query, match)}
+		results <- result{"logs", pollUntilMatch(ctx, t, "logs", client.SearchLogs, query, want)}
 	}()
 
 	var errs []string
@@ -72,7 +59,64 @@ func checkTelemetryFlowing(ctx context.Context, t *testing.T, client *e2eshared.
 const (
 	telemetryPollInterval = 15 * time.Second
 	telemetryMaxAttempts  = 20
+	// Cap how many events we dump per failed attempt to keep CI logs readable.
+	telemetryDebugEventLimit = 3
 )
+
+type matchWant struct {
+	Service string
+	Env     string
+	RunID   string
+}
+
+// matchGaps lists which required fields are missing from an event.
+func matchGaps(e e2eshared.Event, want matchWant) []string {
+	var gaps []string
+	if !e.Has("service", want.Service) {
+		gaps = append(gaps, fmt.Sprintf("service!=%q (got %q)", want.Service, attrOrTag(e, "service")))
+	}
+	if !e.Has("env", want.Env) {
+		gaps = append(gaps, fmt.Sprintf("env!=%q (got %q)", want.Env, attrOrTag(e, "env")))
+	}
+	if !e.Has(e2eshared.DefaultRunIDTagKey, want.RunID) {
+		gaps = append(gaps, fmt.Sprintf("%s!=%q (got %q)", e2eshared.DefaultRunIDTagKey, want.RunID, attrOrTag(e, e2eshared.DefaultRunIDTagKey)))
+	}
+
+	return gaps
+}
+
+func attrOrTag(e e2eshared.Event, key string) string {
+	if v, ok := e.Attrs[key]; ok && v != "" {
+		return v
+	}
+	prefix := key + ":"
+	for _, tag := range e.Tags {
+		if strings.HasPrefix(tag, prefix) {
+			return strings.TrimPrefix(tag, prefix)
+		}
+	}
+
+	return "<missing>"
+}
+
+func formatEventDebug(e e2eshared.Event) string {
+	keys := make([]string, 0, len(e.Attrs))
+	for k := range e.Attrs {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	attrs := make([]string, 0, len(keys))
+	for _, k := range keys {
+		attrs = append(attrs, fmt.Sprintf("%s=%q", k, e.Attrs[k]))
+	}
+	tags := append([]string(nil), e.Tags...)
+	sort.Strings(tags)
+	if len(tags) > 20 {
+		tags = append(tags[:20], fmt.Sprintf("...(+%d more)", len(e.Tags)-20))
+	}
+
+	return fmt.Sprintf("attrs{%s} tags[%s]", strings.Join(attrs, " "), strings.Join(tags, ", "))
+}
 
 // pollUntilMatch polls search on a bounded budget until at least one returned event
 // satisfies match, retrying the cloud (transient query errors, propagation delay) but
@@ -80,28 +124,51 @@ const (
 func pollUntilMatch(
 	ctx context.Context,
 	t *testing.T,
-	_ *e2eshared.TelemetryClient,
 	label string,
 	search func(context.Context, string) ([]e2eshared.Event, error),
 	query string,
-	match func(e2eshared.Event) bool,
+	want matchWant,
 ) error {
 	var lastErr error
 	for attempt := 1; attempt <= telemetryMaxAttempts; attempt++ {
 		t.Logf("checking %s telemetry (attempt %d/%d)", label, attempt, telemetryMaxAttempts)
 		events, err := search(ctx, query)
 		if err != nil {
+			t.Logf("%s search error: %v", label, err)
 			lastErr = err
+		} else if len(events) == 0 {
+			t.Logf("%s: 0 events for query %q", label, query)
+			lastErr = fmt.Errorf("no %s found yet for query %q", label, query)
 		} else {
-			if slices.ContainsFunc(events, match) {
-				t.Logf("found matching %s telemetry", label)
+			var matched bool
+			for i, e := range events {
+				gaps := matchGaps(e, want)
+				if len(gaps) == 0 {
+					t.Logf("found matching %s telemetry", label)
+					matched = true
+					break
+				}
+				if i < telemetryDebugEventLimit {
+					t.Logf("%s event[%d] gaps=%v %s", label, i, gaps, formatEventDebug(e))
+				}
+			}
+			if matched {
 				return nil
 			}
-			if len(events) > 0 {
-				lastErr = fmt.Errorf("%d %s found for query %q but none carried the run identity", len(events), label, query)
-			} else {
-				lastErr = fmt.Errorf("no %s found yet for query %q", label, query)
+			if len(events) > telemetryDebugEventLimit {
+				t.Logf("%s: ... truncated debug for %d additional events", label, len(events)-telemetryDebugEventLimit)
 			}
+			// Summarize the most common gap across the page for the final error.
+			gapCounts := map[string]int{}
+			for _, e := range events {
+				for _, g := range matchGaps(e, want) {
+					// Collapse to the field name before "!=" for a short summary.
+					field := strings.SplitN(g, "!=", 2)[0]
+					gapCounts[field]++
+				}
+			}
+			lastErr = fmt.Errorf("%d %s found for query %q but none matched (gap counts: %v)",
+				len(events), label, query, gapCounts)
 		}
 		if attempt < telemetryMaxAttempts {
 			select {
