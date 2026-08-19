@@ -2,7 +2,7 @@
 
 This example demonstrates a step-by-step on how to use the `terraform-google-cloud-run-datadog` wrapper module to fully instrument a sample .NET service with logs, metrics, and tracing using Datadog.
 
-Instrumentation here comes from Single-Language Serverless Instrumentation (SSI): `datadog_apm_instrumentation` makes the module run a tracer sidecar that stages the `.NET` tracer on a shared volume and sets the `CORECLR_*` profiler variables for the app container. Because of that, the image sets no `CORECLR_*` variables and ships no profiler.
+Instrumentation here comes from Single Step Instrumentation (SSI): `datadog_apm_instrumentation` makes the module run a tracer sidecar that stages the `.NET` tracer on a shared volume and sets the `CORECLR_*` profiler variables for the app container. Because of that, the image sets no `CORECLR_*` variables and ships no profiler.
 
 For the variant that installs the tracer in the image instead, see [`examples/dotnet`](../dotnet).
 

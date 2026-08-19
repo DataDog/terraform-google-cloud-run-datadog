@@ -2,7 +2,7 @@
 
 This example demonstrates a step-by-step on how to use the `terraform-google-cloud-run-datadog` wrapper module to fully instrument a sample Ruby service with logs, metrics, and tracing using Datadog.
 
-Instrumentation here comes from Single-Language Serverless Instrumentation (SSI): `datadog_apm_instrumentation` makes the module run a tracer sidecar that stages the Ruby tracer on a shared volume and sets `RUBYOPT` for the app container. The app itself contains no Datadog code and no `datadog` gem — trace and span IDs still show up in its logs because the injected tracer adds them.
+Instrumentation here comes from Single Step Instrumentation (SSI): `datadog_apm_instrumentation` makes the module run a tracer sidecar that stages the Ruby tracer on a shared volume and sets `RUBYOPT` for the app container. The app itself contains no Datadog code and no `datadog` gem — trace and span IDs still show up in its logs because the injected tracer adds them.
 
 The injected tracer is added to the app's bundle rather than required directly, so the app only picks it up if it boots through `Bundler.require` and exposes a railtie for the tracer to hook into. That is why the sample app is a Rails application — Sinatra and other non-railtie frameworks get no request spans — and why it starts with `bin/rails server` instead of `bundle exec`, which would reset the `BUNDLE_GEMFILE` the tracer was added to.
 
