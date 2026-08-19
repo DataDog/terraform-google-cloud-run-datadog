@@ -4,7 +4,7 @@ Live instrumentation lifecycle against ephemeral Cloud Run services for every
 runtime under [`examples/`](../examples). Each mode is built from its own example:
 sidecar images come from `examples/<runtime>`, which ships the tracer in the image,
 and Single-Language SSI images from `examples/<runtime>-ssi`, which ships no tracer
-and lets the module inject one. SSI covers `node`, `python`, `ruby`, `php`,
+and lets the module inject one. SSI covers `node`, `java`, `python`, `ruby`, `php`,
 `dotnet`, and `node-function`; Go is sidecar-only.
 
 ## Run locally

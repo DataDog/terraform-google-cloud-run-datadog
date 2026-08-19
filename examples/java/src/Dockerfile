@@ -1,0 +1,29 @@
+# Unless explicitly stated otherwise all files in this repository are licensed under the Apache-2.0 License.
+# This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2025 Datadog, Inc.
+
+FROM maven:3.9-eclipse-temurin-21 AS build
+WORKDIR /app
+
+# Resolve dependencies against the pom alone so edits to src/ reuse the cached layer.
+COPY pom.xml ./
+RUN mvn -B -q dependency:go-offline
+
+COPY src ./src
+RUN mvn -B -q package -DskipTests
+
+FROM eclipse-temurin:21-jre
+WORKDIR /app
+
+COPY --from=build /app/target/app.jar ./app.jar
+
+ARG DD_JAVA_AGENT_VERSION=1.64.2
+# Maven Central sha256 for dd-java-agent-${DD_JAVA_AGENT_VERSION}.jar
+ARG DD_JAVA_AGENT_SHA256=bdd2f818138b683d0c266637fbda4bccf01e940d55bdeb2ea43aaa6d43218ddf
+RUN curl -fsSL --retry 5 --retry-delay 2 --retry-connrefused -o /app/dd-java-agent.jar \
+    "https://repo1.maven.org/maven2/com/datadoghq/dd-java-agent/${DD_JAVA_AGENT_VERSION}/dd-java-agent-${DD_JAVA_AGENT_VERSION}.jar" \
+ && echo "${DD_JAVA_AGENT_SHA256}  /app/dd-java-agent.jar" | sha256sum -c -
+ENV JAVA_TOOL_OPTIONS="-javaagent:/app/dd-java-agent.jar"
+
+ENV PORT=8080
+EXPOSE 8080
+CMD ["java", "-jar", "app.jar"]
