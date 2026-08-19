@@ -103,6 +103,7 @@ build_pack_image() {
   echo "====== Building ${runtime} ${mode} (pack) from ${src#"$REPO_ROOT/"} ======"
   gcloud builds submit --pack \
     "image=${img},env=GOOGLE_FUNCTION_TARGET=helloHttp" \
+    --gcs-log-dir="gs://${PROJECT_ID}_cloudbuild/logs" \
     --project "${PROJECT_ID}" \
     "$src"
   emit "$(env_key "$runtime" "$mode")" "${img}"
