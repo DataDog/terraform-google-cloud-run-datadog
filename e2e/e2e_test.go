@@ -80,12 +80,15 @@ type scenario struct {
 	name string
 	// imageEnv is the env var holding the workload image (from build_images.sh).
 	imageEnv string
+	// ssiLanguage enables Single-Language SSI when non-empty (e.g. "js").
+	ssiLanguage string
 	// isFunction enables Cloud Run Functions build_config + base_image_uri.
 	isFunction bool
 }
 
 func runtimeScenarios() []scenario {
 	return []scenario{
+		// Sidecar-only (manual Docker stage / pack image).
 		{name: "go_sidecar", imageEnv: "E2E_IMAGE_GO_SIDECAR"},
 		{
 			name:     "node_sidecar",
@@ -112,10 +115,43 @@ func runtimeScenarios() []scenario {
 			imageEnv:   "E2E_IMAGE_NODE_FUNCTION_SIDECAR",
 			isFunction: true,
 		},
+
+		{
+			name:        "node_ssi",
+			imageEnv:    "E2E_IMAGE_NODE_SSI",
+			ssiLanguage: "js",
+		},
+		{
+			name:        "python_ssi",
+			imageEnv:    "E2E_IMAGE_PYTHON_SSI",
+			ssiLanguage: "python",
+		},
+		{
+			name:        "ruby_ssi",
+			imageEnv:    "E2E_IMAGE_RUBY_SSI",
+			ssiLanguage: "ruby",
+		},
+		{
+			name:        "php_ssi",
+			imageEnv:    "E2E_IMAGE_PHP_SSI",
+			ssiLanguage: "php",
+		},
+		{
+			name:        "dotnet_ssi",
+			imageEnv:    "E2E_IMAGE_DOTNET_SSI",
+			ssiLanguage: "dotnet",
+		},
+		{
+			name:        "node_function_ssi",
+			imageEnv:    "E2E_IMAGE_NODE_FUNCTION_SSI",
+			ssiLanguage: "js",
+			isFunction:  true,
+		},
 	}
 }
 
-// TestCloudRunE2E runs the full instrumentation lifecycle for every examples runtime.
+// TestCloudRunE2E runs the full instrumentation lifecycle for every examples runtime:
+// sidecar-only for all, plus SSI where supported.
 func TestCloudRunE2E(t *testing.T) {
 	cfg := loadConfig(t)
 
@@ -148,7 +184,7 @@ func runCloudRunE2E(t *testing.T, cfg config, sc scenario) {
 	runID := e2eshared.NewRunID()
 	serviceName := e2eshared.ResourceName(sharedCfg, runID)
 	createdTS := strconv.FormatInt(time.Now().Unix(), 10)
-	t.Logf("run id %s -> service %s (scenario=%s)", runID, serviceName, sc.name)
+	t.Logf("run id %s -> service %s (scenario=%s ssi=%q)", runID, serviceName, sc.name, sc.ssiLanguage)
 
 	fixtureDir := prepareFixtureDir(t)
 
@@ -164,6 +200,12 @@ func runCloudRunE2E(t *testing.T, cfg config, sc scenario) {
 		"datadog_version": testVersion,
 		"run_id":          runID,
 		"created_ts":      createdTS,
+	}
+	if sc.ssiLanguage != "" {
+		vars["datadog_apm_instrumentation"] = map[string]interface{}{
+			"language":       sc.ssiLanguage,
+			"tracer_version": "latest",
+		}
 	}
 	if sc.isFunction {
 		vars["base_image_uri"] = nodeFunctionBaseImage
@@ -212,6 +254,14 @@ func runCloudRunE2E(t *testing.T, cfg config, sc scenario) {
 		SidecarImage: cfg.sidecarImage,
 		CreatedTS:    createdTS,
 	}
+	if sc.ssiLanguage != "" {
+		exp.SSI = &SSIExpectations{
+			Language:      sc.ssiLanguage,
+			TracerVersion: "latest",
+			VolumeMedium:  "MEMORY",
+			ReadyPort:     defaultReadyPort,
+		}
+	}
 
 	// APPLY -> verify CONFIG.
 	func() {
@@ -249,6 +299,16 @@ func runCloudRunE2E(t *testing.T, cfg config, sc scenario) {
 		done := logProgress(t, "checking Terraform idempotence")
 		defer done()
 		exitCode := terraform.PlanExitCode(t, tfOpts)
+		if exitCode != 0 {
+			// The exit code alone cannot be acted on, and the fixture dir is a temp dir
+			// that is gone before anyone reads the failure, so capture the diff now.
+			out, planErr := terraform.PlanE(t, tfOpts)
+			if planErr != nil {
+				t.Logf("could not capture the non-empty plan: %v", planErr)
+			} else {
+				t.Logf("non-empty plan:\n%s", out)
+			}
+		}
 		require.Equal(t, 0, exitCode, "re-apply must be a no-op: terraform plan reported a diff")
 	}()
 
