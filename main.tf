@@ -193,6 +193,11 @@ locals {
 
   template_volumes = concat(local.volumes_without_shared_volume, local.tracer_volume, local.logger_volume)
 
+  # emptyDir medium=DISK is a Cloud Run BETA feature; force at least BETA when SSI is on.
+  # Preserve ALPHA if the caller already opted into it.
+  launch_stage = local.using_disk_medium ? (
+    var.launch_stage == "ALPHA" ? "ALPHA" : "BETA"
+  ) : var.launch_stage
 }
 
 

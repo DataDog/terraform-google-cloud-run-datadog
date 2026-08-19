@@ -205,6 +205,7 @@ func runCloudRunE2E(t *testing.T, cfg config, sc scenario) {
 		vars["datadog_apm_instrumentation"] = map[string]interface{}{
 			"language":       sc.ssiLanguage,
 			"tracer_version": "latest",
+			"volume_medium":  "MEMORY",
 		}
 	}
 	if sc.isFunction {

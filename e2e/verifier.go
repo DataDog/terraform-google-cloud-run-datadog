@@ -429,8 +429,12 @@ func verifyTracerSidecar(v *e2eshared.Violations, tmpl template, ssi *SSIExpecta
 	if vol.EmptyDir.Medium != ssi.VolumeMedium {
 		v.Addf("tracer volume medium = %q, want %q", vol.EmptyDir.Medium, ssi.VolumeMedium)
 	}
-	if vol.EmptyDir.SizeLimit != "500Mi" {
-		v.Addf("tracer volume size_limit = %q, want %q", vol.EmptyDir.SizeLimit, "500Mi")
+	wantLimit := "500Mi"
+	if ssi.VolumeMedium == "DISK" {
+		wantLimit = "10Gi"
+	}
+	if vol.EmptyDir.SizeLimit != wantLimit {
+		v.Addf("tracer volume size_limit = %q, want %q", vol.EmptyDir.SizeLimit, wantLimit)
 	}
 }
 
