@@ -34,7 +34,6 @@ const (
 	testVersion = "1-0-0"
 
 	nodeFunctionBaseImage = "us-central1-docker.pkg.dev/serverless-runtimes/google-22-full/runtimes/nodejs22"
-
 )
 
 type config struct {
