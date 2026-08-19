@@ -2,7 +2,7 @@
 
 This example demonstrates a step-by-step on how to use the `terraform-google-cloud-run-datadog` wrapper module to fully instrument a sample Node.js function with logs, metrics, and tracing using Datadog.
 
-Instrumentation here comes from Single-Language Serverless Instrumentation (SSI): `datadog_apm_instrumentation` makes the module run a tracer sidecar that stages the Node.js tracer on a shared volume and sets `NODE_OPTIONS` for the app container. Because of that, `dd-trace` is not a dependency of the function.
+Instrumentation here comes from Single Step Instrumentation (SSI): `datadog_apm_instrumentation` makes the module run a tracer sidecar that stages the Node.js tracer on a shared volume and sets `NODE_OPTIONS` for the app container. Because of that, `dd-trace` is not a dependency of the function.
 
 For the variant that installs the tracer in the image instead, see [`examples/node-function`](../node-function).
 

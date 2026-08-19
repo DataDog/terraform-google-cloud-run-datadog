@@ -2,7 +2,7 @@
 
 This example demonstrates a step-by-step on how to use the `terraform-google-cloud-run-datadog` wrapper module to fully instrument a sample PHP service with logs, metrics, and tracing using Datadog.
 
-Instrumentation here comes from Single-Language Serverless Instrumentation (SSI): `datadog_apm_instrumentation` makes the module run a tracer sidecar that stages the PHP tracer on a shared volume and sets `PHP_INI_SCAN_DIR` for the app container. Because of that, the tracer extension is not installed in the image.
+Instrumentation here comes from Single Step Instrumentation (SSI): `datadog_apm_instrumentation` makes the module run a tracer sidecar that stages the PHP tracer on a shared volume and sets `PHP_INI_SCAN_DIR` for the app container. Because of that, the tracer extension is not installed in the image.
 
 For the variant that installs the tracer in the image instead, see [`examples/php`](../php).
 

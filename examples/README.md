@@ -17,7 +17,7 @@ themselves:
 - [Ruby](./ruby/)
 - [PHP](./php/)
 
-## Single-Language Serverless Instrumentation (SSI)
+## Single Step Instrumentation (SSI)
 
 These examples ship no tracer in the application image. They set
 `datadog_apm_instrumentation`, and the module runs a tracer sidecar that stages the
