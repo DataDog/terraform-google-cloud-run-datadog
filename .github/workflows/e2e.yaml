@@ -1,7 +1,7 @@
 name: E2E Test
 
 # Full instrumentation lifecycle against live, ephemeral Cloud Run services
-# for every examples runtime.
+# for every examples runtime (sidecar-only + SSI where supported).
 
 permissions:
   contents: read
@@ -70,6 +70,7 @@ jobs:
       - name: Run e2e tests
         working-directory: e2e
         run: |
+          set -euo pipefail
           set -a
           # shellcheck disable=SC1091
           source .image-env

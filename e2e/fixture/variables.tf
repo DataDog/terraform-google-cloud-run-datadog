@@ -62,6 +62,16 @@ variable "datadog_version" {
   nullable    = false
 }
 
+variable "datadog_apm_instrumentation" {
+  type = object({
+    language       = string
+    tracer_version = optional(string, "latest")
+    ready_port     = optional(number, 18999)
+  })
+  description = "When set, enables Single-Language SSI (tracer sidecar + language env injection)."
+  default     = null
+}
+
 variable "build_config" {
   type = object({
     function_target          = string
