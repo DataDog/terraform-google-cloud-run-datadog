@@ -252,11 +252,17 @@ variable "template" {
         name           = optional(string)
       })),
       readiness_probe = optional(object({
+        failure_threshold = optional(number),
+        period_seconds    = optional(number),
+        success_threshold = optional(number),
+        timeout_seconds   = optional(number),
         grpc = optional(object({
+          port    = optional(number),
           service = optional(string)
         })),
         http_get = optional(object({
-
+          path = optional(string),
+          port = optional(number)
         }))
       })),
       resources = optional(object({
