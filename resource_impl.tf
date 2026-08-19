@@ -50,7 +50,10 @@ resource "google_cloud_run_v2_service" "this" {
   dynamic "scaling" {
     for_each = try(var.scaling, null) != null ? [true] : []
     content {
-      scaling_mode = try(var.scaling.scaling_mode, null)
+      manual_instance_count = try(var.scaling.manual_instance_count, null)
+      max_instance_count    = try(var.scaling.max_instance_count, null)
+      min_instance_count    = try(var.scaling.min_instance_count, null)
+      scaling_mode          = try(var.scaling.scaling_mode, null)
     }
   }
   template {

@@ -186,7 +186,10 @@ variable "multi_region_settings" {
 
 variable "scaling" {
   type = object({
-    scaling_mode = optional(string)
+    manual_instance_count = optional(number),
+    max_instance_count    = optional(number),
+    min_instance_count    = optional(number),
+    scaling_mode          = optional(string)
   })
   default = null
 }
