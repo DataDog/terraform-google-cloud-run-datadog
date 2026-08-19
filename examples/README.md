@@ -27,6 +27,7 @@ Go tracer has to be compiled into the binary.
 - [Python](./python-ssi/)
 - [Node.js](./node-ssi/)
 - [Node.js (Cloud Run function)](./node-function-ssi/)
+- [Java](./java-ssi/)
 - [.NET](./dotnet-ssi/)
 - [Ruby](./ruby-ssi/)
 - [PHP](./php-ssi/)

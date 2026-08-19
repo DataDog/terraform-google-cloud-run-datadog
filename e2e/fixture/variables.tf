@@ -25,6 +25,13 @@ variable "workload_image" {
   nullable    = false
 }
 
+variable "workload_memory" {
+  type        = string
+  description = "Memory limit for the workload container. Raised for JVM workloads, which need more headroom than the scripting runtimes."
+  default     = "512Mi"
+  nullable    = false
+}
+
 variable "sidecar_image" {
   type        = string
   description = "Datadog serverless-init sidecar image, pinned by digest so failures blame the module, not upstream."
