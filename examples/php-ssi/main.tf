@@ -14,7 +14,8 @@ module "datadog-cloud-run-v2-php" {
 
   datadog_api_key = var.datadog_api_key
   datadog_apm_instrumentation = {
-    language = "php"
+    language      = "php"
+    volume_medium = "DISK"
   }
   datadog_site           = "datadoghq.com"
   datadog_service        = "cloud-run-tf-php-ssi-example"
@@ -80,7 +81,7 @@ module "datadog-cloud-run-v2-php" {
     ]
     scaling = {
       min_instance_count = 1
-      max_instance_count = 1
+      max_instance_count = 10
     }
   }
 
@@ -91,9 +92,10 @@ module "datadog-cloud-run-v2-php" {
     }
   ]
 
+  # Service-level max must be <= 10 when SSI uses a 10Gi DISK emptyDir (ephemeral-disk quota).
   scaling = {
     min_instance_count = 1
-
+    max_instance_count = 10
   }
 
 }

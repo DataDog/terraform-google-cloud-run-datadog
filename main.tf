@@ -8,6 +8,7 @@ locals {
   tracer_volume_name       = "datadog-tracer"
   tracer_volume_mount_path = "/datadog-lib"
   apm_enabled              = var.datadog_apm_instrumentation != null
+  using_disk_medium        = local.apm_enabled ? var.datadog_apm_instrumentation.volume_medium == "DISK" : false
   injection_mode_tag       = "_dd.injection.mode:serverless-single-lang"
   tracer_sidecar_name = local.apm_enabled ? (
     "tracer-sidecar-${var.datadog_apm_instrumentation.language}"
@@ -526,8 +527,9 @@ locals {
   tracer_volume = local.apm_enabled ? [{
     name = local.tracer_volume_name
     empty_dir = {
-      medium     = "MEMORY"
-      size_limit = "500Mi"
+      medium = var.datadog_apm_instrumentation.volume_medium
+      # Disk-backed emptyDir requires at least 10Gi size_limit
+      size_limit = local.using_disk_medium ? "10Gi" : "500Mi"
     }
   }] : []
 
@@ -541,6 +543,11 @@ locals {
 
   template_volumes = concat(local.volumes_without_shared_volume, local.tracer_volume, local.logger_volume)
 
+  # emptyDir medium=DISK is a Cloud Run BETA feature; force at least BETA when SSI is on.
+  # Preserve ALPHA if the caller already opted into it.
+  launch_stage = local.using_disk_medium ? (
+    var.launch_stage == "ALPHA" ? "ALPHA" : "BETA"
+  ) : var.launch_stage
 }
 
 

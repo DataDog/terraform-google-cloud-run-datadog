@@ -153,6 +153,7 @@ variable "datadog_apm_instrumentation" {
     language       = string
     tracer_version = optional(string, "latest")
     tracer_libc    = optional(string, "glibc")
+    volume_medium  = optional(string, "MEMORY")
     ready_port     = optional(number, 18999)
   })
   description = <<-DESCRIPTION
@@ -164,6 +165,8 @@ Enables auto-instrumentation via a tracer sidecar.
   For 'dotnet', pinned major versions below 3 are unsupported.
 - tracer_libc - C library ABI of the application image: 'glibc' (default) or 'musl'.
   Selects the PHP loader path; Ruby does not support musl.
+- volume_medium - emptyDir medium for the tracer volume: 'MEMORY' (default) or 'DISK'.
+  DISK requires launch_stage BETA and a 10Gi size_limit.
 - ready_port - Port the tracer sidecar listens on once the copy is verified. Must not
   collide with the agent sidecar health port or any app container port, since containers in
   an instance share a network namespace.
@@ -189,6 +192,14 @@ DESCRIPTION
       var.datadog_apm_instrumentation.tracer_libc,
     )
     error_message = "Invalid tracer_libc. Valid options are: 'glibc' and 'musl'."
+  }
+
+  validation {
+    condition = var.datadog_apm_instrumentation == null ? true : contains(
+      ["MEMORY", "DISK"],
+      var.datadog_apm_instrumentation.volume_medium,
+    )
+    error_message = "Invalid volume_medium. Valid options are: 'MEMORY' and 'DISK'."
   }
 
   validation {
