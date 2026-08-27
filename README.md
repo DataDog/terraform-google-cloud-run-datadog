@@ -96,7 +96,7 @@ The following Datadog variables can be set for sidecar:
 
 #### Auto-instrumentation (`datadog_apm_instrumentation`)
 
-Setting `datadog_apm_instrumentation` adds a `tracer-sidecar-<language>` container that
+Setting `datadog_apm_instrumentation` adds a `datadog-tracer` container that
 copies the tracer into a shared volume, injects language loader env vars into the **main**
 application container only, and makes that container wait with `depends_on`. The main
 container is the single `template.containers` entry that declares `ports`. Helper sidecars are left untouched. If more than one container
@@ -124,7 +124,7 @@ and rejects unsupported Ruby-on-musl. For `dotnet`, pinned tracer majors below 3
 rejected
 
 Pinned `tracer_version` tags must be above `java 1.65.1`, `js 6.10.0`, `python 4.13.0`,
-`dotnet 3.51.1`, `ruby 2.41.0`, `php 1.23.3`, which is where the probe-servers are first made available. 
+`dotnet 3.51.1`, `ruby 2.41.0`, `php 1.23.3`, which is where the probe-servers are first made available.
 `latest` and floating tags are accepted as-is.
 
 `ready_port` must be between 1024 and 65535 and must not collide with

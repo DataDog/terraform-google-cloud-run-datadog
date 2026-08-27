@@ -126,6 +126,7 @@ locals {
     { service = local.datadog_service, dd_sls_terraform_module = local.module_version },
     var.datadog_env != null ? { env = var.datadog_env } : {},
     var.datadog_version != null ? { version = var.datadog_version } : {},
+    local.apm_labels,
   )
 
   # Update the environments on the containers

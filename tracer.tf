@@ -9,10 +9,8 @@ locals {
   # Tracer copy volume mount path used by dd-lib-*-init and language env vars.
   tracer_volume_name       = "datadog-tracer"
   tracer_volume_mount_path = "/datadog-lib"
-  tracer_sidecar_name = local.apm_enabled ? (
-    "tracer-sidecar-${var.datadog_apm_instrumentation.language}"
-  ) : null
-  tracer_libc = local.apm_enabled ? var.datadog_apm_instrumentation.tracer_libc : null
+  tracer_sidecar_name      = "datadog-tracer"
+  tracer_libc              = local.apm_enabled ? var.datadog_apm_instrumentation.tracer_libc : null
   # PHP loader layout differs by libc ABI (linux-gnu vs linux-musl).
   php_loader_dir = local.apm_enabled ? (
     "${local.tracer_volume_mount_path}/${local.tracer_libc == "musl" ? "linux-musl" : "linux-gnu"}/loader"
@@ -158,6 +156,17 @@ locals {
     for c in local.containers_without_sidecar : c
     if try(c.ports, null) != null
   ]
+  # A ports block without a container_port still exposes a port: Cloud Run listens on 8080.
+  cloud_run_default_container_port = 8080
+  apm_app_container_ports = [
+    for c in local.apm_containers_with_ports :
+    coalesce(try(c.ports.container_port, null), local.cloud_run_default_container_port)
+  ]
+  # Ports already claimed inside the instance's shared network namespace.
+  apm_reserved_ports = concat(
+    [var.datadog_sidecar.health_port],
+    local.apm_app_container_ports,
+  )
   main_container_indexes = [
     for idx, c in local.containers_without_sidecar : idx
     if(
@@ -282,6 +291,9 @@ locals {
     }
   }] : []
 
+  # Resource-level marker datadog-ci uses to recognize SSI-managed services, applied in local.labels
+  apm_labels = local.apm_enabled ? { dd_sls_injection_mode = "single_language" } : {}
+
   ### Contributions to the main app container, applied in local.template_containers
 
   # Env vars the module owns on the instrumented container. Loader vars are listed here so a
@@ -309,17 +321,8 @@ check "ready_port_is_not_already_in_use" {
   assert {
     # Containers in an instance share a network namespace, so the readiness port must not
     # be claimed by the agent sidecar or by an app container.
-    condition = local.apm_enabled ? !contains(
-      concat(
-        [var.datadog_sidecar.health_port],
-        [
-          for c in local.containers_without_sidecar : c.ports.container_port
-          if try(c.ports.container_port, null) != null
-        ],
-      ),
-      var.datadog_apm_instrumentation.ready_port,
-    ) : true
-    error_message = "datadog_apm_instrumentation.ready_port (${try(var.datadog_apm_instrumentation.ready_port, "null")}) is already used by datadog_sidecar.health_port or a template.containers port. All containers in a Cloud Run instance share one network namespace, so the tracer readiness signal needs a port of its own."
+    condition     = !local.apm_enabled || !contains(local.apm_reserved_ports, var.datadog_apm_instrumentation.ready_port)
+    error_message = "datadog_apm_instrumentation.ready_port (${try(var.datadog_apm_instrumentation.ready_port, "null")}) is already used by datadog_sidecar.health_port or a template.containers port (a ports block without a container_port listens on ${local.cloud_run_default_container_port}). All containers in a Cloud Run instance share one network namespace, so the tracer readiness signal needs a port of its own."
   }
 }
 
