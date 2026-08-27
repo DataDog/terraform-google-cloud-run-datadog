@@ -186,7 +186,7 @@ module "example_cloud_run_service" {
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.5.0 |
-| <a name="requirement_google"></a> [google](#requirement\_google) | >= 7.44.0 |
+| <a name="requirement_google"></a> [google](#requirement\_google) | >= 7.43.0 |
 
 ## Modules
 
