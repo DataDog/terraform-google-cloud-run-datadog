@@ -94,42 +94,33 @@ The following Datadog variables can be set for sidecar:
 | `DD_LOG_LEVEL`                    | (Optional) Controls log verbosity in Cloud Run logs (`TRACE`, `DEBUG`, `INFO`, etc.). | Set via `datadog_log_level`.                                                       |
 | Other agent environment variables | For advanced agent configuration. Avoid overriding any of the above variables.        | Set via `datadog_sidecar.env_vars`.                                                     |
 
-#### Auto-instrumentation (`datadog_apm_instrumentation`)
+#### Automatic APM instrumentation
 
-Setting `datadog_apm_instrumentation` adds a `datadog-tracer` container that
-copies the tracer into a shared volume, injects language loader env vars into the **main**
-application container only, and makes that container wait with `depends_on`. The main
-container is the single `template.containers` entry that declares `ports`. Helper sidecars are left untouched. If more than one container
-declares ports, or none do and there are multiple containers, the module reports an
-ambiguous main-container layout.
+Set `datadog_apm_instrumentation` with at least `language` to inject the Datadog tracer into your application:
 
-Loader env vars (`NODE_OPTIONS`, `PYTHONPATH`, `JAVA_TOOL_OPTIONS`, etc.) are merged
-fragment-aware: Datadog’s options are appended/prepended onto existing
-values (or set only when absent), and an option that is already present is left alone
-instead of being duplicated. Compatible customer values are preserved; secret-backed
-loader vars, set-if-absent conflicts, duplicates, and over-length merges are rejected.
+```tf
+datadog_apm_instrumentation = {
+  language = "python"
+}
+```
 
-`DD_TAGS` on the instrumented container gains a leading `_dd.injection.mode:serverless-single-lang`
-tag, so telemetry from the application records how it was instrumented. Other containers and
-the agent sidecar keep `datadog_tags` unchanged.
+Supported languages are `java`, `js`, `dotnet`, `python`, `ruby`, and `php`. The module uses the `latest` tracer image and `glibc` by default. Set `tracer_version` to pin the tracer and `tracer_libc = "musl"` for musl-based images. Ruby does not support musl, and pinned tracer versions must be above the per-language minimums listed in the `datadog_apm_instrumentation` input below.
 
-Cloud Run releases a dependent container once the container it depends on passes its
-startup probe, so the copy has to end with something listening on a port: `ready_port`
-(default `18999`). The main container depends on both the tracer sidecar and the Datadog
-agent sidecar so it does not start before either readiness probe passes. The tracer
-readiness probe polls for Cloud Run's full 240-second startup window before giving up.
+The module instruments the container that declares `ports`, the one Cloud Run routes requests to, and leaves any other container untouched. Existing loader variables such as `NODE_OPTIONS`, `PYTHONPATH`, or `JAVA_TOOL_OPTIONS` are preserved: Datadog's options are added alongside your values instead of replacing them. If the module cannot identify a single application container, or cannot safely extend one of these variables, it reports a warning during `terraform plan`.
 
-`tracer_libc` (default `glibc`) selects the PHP loader path (`linux-gnu` vs `linux-musl`)
-and rejects unsupported Ruby-on-musl. For `dotnet`, pinned tracer majors below 3 are
-rejected
+The tracer is copied into a shared volume, and the application container starts only once that copy and the Datadog agent are ready. The volume is in memory by default; set `volume_medium = "DISK"` to back it with disk instead, which deploys the service at the `BETA` launch stage. `ready_port` (default `18999`) is the port the tracer uses to signal that the copy finished, and it must not collide with `datadog_sidecar.health_port` or an application container port.
 
-Pinned `tracer_version` tags must be above `java 1.65.1`, `js 6.10.0`, `python 4.13.0`,
-`dotnet 3.51.1`, `ruby 2.41.0`, `php 1.23.3`, which is where the probe-servers are first made available.
-`latest` and floating tags are accepted as-is.
+```tf
+datadog_apm_instrumentation = {
+  language       = "js"
+  tracer_version = "latest"
+  tracer_libc    = "glibc"
+  volume_medium  = "MEMORY"
+  ready_port     = 18999
+}
+```
 
-`ready_port` must be between 1024 and 65535 and must not collide with
-`datadog_sidecar.health_port` or any app container port, since all containers in an instance
-share a network namespace.
+It is not recommended to use automatic instrumentation if you have scale-to-zero enabled, as doing so can increase cold-start delays. Prefer manual instrumentation (installing the tracer for your language in your application code/Dockerfile) in these cases.
 
 #### Transitioning from resource to module
 
