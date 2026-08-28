@@ -19,13 +19,14 @@ import (
 
 // Names the module assigns to the components it injects.
 const (
-	sidecarName      = "datadog-sidecar"
-	sharedVolumeName = "shared-volume"
-	tracerVolumeName = "datadog-tracer"
-	tracerVolumePath = "/datadog-lib"
-	injectionModeTag = "_dd.injection.mode:serverless-single-lang"
-	defaultReadyPort = 18999
-	probeServerPath  = "/datadog-init/probe-server"
+	sidecarName       = "datadog-sidecar"
+	sharedVolumeName  = "shared-volume"
+	tracerSidecarName = "datadog-tracer"
+	tracerVolumeName  = "datadog-tracer"
+	tracerVolumePath  = "/datadog-lib"
+	injectionModeTag  = "_dd.injection.mode:serverless-single-lang"
+	defaultReadyPort  = 18999
+	probeServerPath   = "/datadog-init/probe-server"
 
 	// freshnessLabel is the GCP label key carrying the creation timestamp. Label keys
 	// cannot contain ':', so the spec's one_e2e_created:<ts> tag is expressed as the
@@ -172,10 +173,6 @@ func expectedInstrumentedDDTags(runID string) string {
 	return strings.Join([]string{injectionModeTag, expectedDDTags(runID)}, ",")
 }
 
-func tracerSidecarName(language string) string {
-	return "tracer-sidecar-" + language
-}
-
 func tracerRepoName(language string) string {
 	return map[string]string{
 		"java":   "dd-trace-java",
@@ -296,7 +293,7 @@ func verifyInstrumented(svc cloudRunService, exp Expectations) error {
 	appContainers := 0
 	for i := range containers {
 		c := &containers[i]
-		if c.Name == sidecarName || strings.HasPrefix(c.Name, "tracer-sidecar-") {
+		if c.Name == sidecarName || c.Name == tracerSidecarName {
 			continue
 		}
 		appContainers++
@@ -325,10 +322,8 @@ func verifyInstrumented(svc cloudRunService, exp Expectations) error {
 	if ssiEnabled {
 		verifyTracerSidecar(&v, tmpl, exp.SSI)
 	} else {
-		for _, c := range containers {
-			if strings.HasPrefix(c.Name, "tracer-sidecar-") {
-				v.Addf("unexpected tracer container %q when SSI is disabled", c.Name)
-			}
+		if findContainer(containers, tracerSidecarName) != nil {
+			v.Addf("unexpected tracer container %q when SSI is disabled", tracerSidecarName)
 		}
 		if _, ok := findVolume(tmpl.Volumes, tracerVolumeName); ok {
 			v.Addf("unexpected tracer volume %q when SSI is disabled", tracerVolumeName)
@@ -364,9 +359,8 @@ func verifyAppSSI(v *e2eshared.Violations, app *container, ssi *SSIExpectations)
 
 	// Startup is sequenced by container start order, so the workload entrypoint must be
 	// left alone: no marker wait script may appear in command or args.
-	wantDep := tracerSidecarName(ssi.Language)
-	if !containsString(app.DependsOn, wantDep) {
-		v.Addf("app container %q dependsOn = %#v, want it to include %q", app.Name, app.DependsOn, wantDep)
+	if !containsString(app.DependsOn, tracerSidecarName) {
+		v.Addf("app container %q dependsOn = %#v, want it to include %q", app.Name, app.DependsOn, tracerSidecarName)
 	}
 	marker := copyFinishedMarker(ssi.Language)
 	for _, arg := range append(append([]string{}, app.Command...), app.Args...) {
@@ -404,10 +398,9 @@ func verifyTracerReadiness(v *e2eshared.Violations, tracer *container, ssi *SSIE
 }
 
 func verifyTracerSidecar(v *e2eshared.Violations, tmpl template, ssi *SSIExpectations) {
-	wantName := tracerSidecarName(ssi.Language)
-	tracer := findContainer(tmpl.Containers, wantName)
+	tracer := findContainer(tmpl.Containers, tracerSidecarName)
 	if tracer == nil {
-		v.Addf("tracer sidecar %q missing", wantName)
+		v.Addf("tracer sidecar %q missing", tracerSidecarName)
 		return
 	}
 

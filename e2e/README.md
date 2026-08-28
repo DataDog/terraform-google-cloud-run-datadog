@@ -50,7 +50,7 @@ Each subtest of **TestCloudRunE2E**:
 
 SSI scenarios additionally assert:
 
-- `tracer-sidecar-<language>` + `datadog-tracer` volume
+- `datadog-tracer` sidecar + `datadog-tracer` volume
 - language injection env (`NODE_OPTIONS`, `PYTHONPATH`, …) and app `dependsOn` the tracer sidecar
 - `_dd.injection.mode:serverless-single-lang` leading the app container's `DD_TAGS`, with the
   agent sidecar's `DD_TAGS` left as configured
