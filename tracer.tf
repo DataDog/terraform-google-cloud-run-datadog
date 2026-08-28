@@ -167,6 +167,10 @@ locals {
     [var.datadog_sidecar.health_port],
     local.apm_app_container_ports,
   )
+  apm_ready_port_is_reserved = local.apm_enabled ? contains(
+    local.apm_reserved_ports,
+    var.datadog_apm_instrumentation.ready_port,
+  ) : false
   main_container_indexes = [
     for idx, c in local.containers_without_sidecar : idx
     if(
@@ -321,7 +325,7 @@ check "ready_port_is_not_already_in_use" {
   assert {
     # Containers in an instance share a network namespace, so the readiness port must not
     # be claimed by the agent sidecar or by an app container.
-    condition     = !local.apm_enabled || !contains(local.apm_reserved_ports, var.datadog_apm_instrumentation.ready_port)
+    condition     = !local.apm_ready_port_is_reserved
     error_message = "datadog_apm_instrumentation.ready_port (${try(var.datadog_apm_instrumentation.ready_port, "null")}) is already used by datadog_sidecar.health_port or a template.containers port (a ports block without a container_port listens on ${local.cloud_run_default_container_port}). All containers in a Cloud Run instance share one network namespace, so the tracer readiness signal needs a port of its own."
   }
 }
