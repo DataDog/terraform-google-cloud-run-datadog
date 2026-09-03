@@ -67,9 +67,32 @@ emit() {
   echo "${key}=${value}"
 }
 
+retry() {
+  local attempt=1
+  local max_attempts=3
+  until "$@"; do
+    if [ "$attempt" -ge "$max_attempts" ]; then
+      echo "Error: '$*' failed after ${max_attempts} attempts" >&2
+      return 1
+    fi
+    echo "Attempt ${attempt}/${max_attempts} of '$*' failed; retrying in $((attempt * 15))s" >&2
+    sleep "$((attempt * 15))"
+    attempt=$((attempt + 1))
+  done
+}
+
 # image_ref <runtime> <mode>  -> full image URI
 image_ref() {
   echo "${BASE}/${1}-${2}:${TAG}"
+}
+
+# Each mode has its own example directory: examples/<runtime> ships the tracer in the
+# image, examples/<runtime>-ssi ships no tracer and lets the module inject one.
+example_dir() {
+  case "$2" in
+  ssi) echo "${1}-ssi" ;;
+  *) echo "$1" ;;
+  esac
 }
 
 env_key() {
@@ -79,7 +102,7 @@ env_key() {
 build_docker_image() {
   local runtime="$1"
   local mode="$2"
-  local src="$EXAMPLES_DIR/${runtime}/src"
+  local src="$EXAMPLES_DIR/$(example_dir "$runtime" "$mode")/src"
   if [ ! -f "$src/Dockerfile" ]; then
     echo "Error: missing Dockerfile at $src" >&2
     exit 1
@@ -88,20 +111,20 @@ build_docker_image() {
   local img
   img="$(image_ref "$runtime" "$mode")"
   echo "====== Building ${runtime} ${mode} from ${src#"$REPO_ROOT/"} ======"
-  docker build --platform linux/amd64 -t "${img}" "$src"
-  docker push "${img}"
+  retry docker build --platform linux/amd64 -t "${img}" "$src"
+  retry docker push "${img}"
   emit "$(env_key "$runtime" "$mode")" "${img}"
 }
 
 build_pack_image() {
   local runtime="$1"
   local mode="$2"
-  local src="$EXAMPLES_DIR/${runtime}/src"
+  local src="$EXAMPLES_DIR/$(example_dir "$runtime" "$mode")/src"
 
   local img
   img="$(image_ref "$runtime" "$mode")"
   echo "====== Building ${runtime} ${mode} (pack) from ${src#"$REPO_ROOT/"} ======"
-  gcloud builds submit --pack \
+  retry gcloud builds submit --pack \
     "image=${img},env=GOOGLE_FUNCTION_TARGET=helloHttp" \
     --gcs-log-dir="gs://${PROJECT_ID}_cloudbuild/logs" \
     --project "${PROJECT_ID}" \
@@ -109,12 +132,19 @@ build_pack_image() {
   emit "$(env_key "$runtime" "$mode")" "${img}"
 }
 
+# Sidecar mode: every runtime, including go, which has no SSI path in the module.
 for runtime in go node python ruby php dotnet; do
   build_docker_image "$runtime" sidecar
 done
 
+# SSI mode: the runtimes the module can inject a tracer for.
+for runtime in node python ruby php dotnet; do
+  build_docker_image "$runtime" ssi
+done
+
 # node-function builds with Cloud Buildpacks rather than a Dockerfile.
 build_pack_image node-function sidecar
+build_pack_image node-function ssi
 
 echo
 echo "Wrote ${OUT_FILE}"
