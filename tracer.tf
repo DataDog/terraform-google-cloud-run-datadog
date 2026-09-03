@@ -5,6 +5,7 @@
 # and the loader env vars merged onto the instrumented container.
 locals {
   apm_enabled        = var.datadog_apm_instrumentation != null
+  using_disk_medium  = local.apm_enabled ? var.datadog_apm_instrumentation.volume_medium == "DISK" : false
   injection_mode_tag = "_dd.injection.mode:serverless-single-lang"
   # Tracer copy volume mount path used by dd-lib-*-init and language env vars.
   tracer_volume_name       = "datadog-tracer"
@@ -290,8 +291,9 @@ locals {
   tracer_volume = local.apm_enabled ? [{
     name = local.tracer_volume_name
     empty_dir = {
-      medium     = "MEMORY"
-      size_limit = "500Mi"
+      medium = var.datadog_apm_instrumentation.volume_medium
+      # Disk-backed emptyDir requires at least 10Gi size_limit
+      size_limit = local.using_disk_medium ? "10Gi" : "500Mi"
     }
   }] : []
 

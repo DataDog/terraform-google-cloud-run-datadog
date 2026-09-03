@@ -5,6 +5,7 @@
     "fields": {
         "impl": [
             "labels",
+            "launch_stage",
             "template.containers",
             "template.volumes"
         ],
