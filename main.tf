@@ -4,6 +4,8 @@
 locals {
   module_version  = "2_2_0"
   datadog_service = var.datadog_service != null ? var.datadog_service : var.name
+
+  # Base env vars the module always owns on every app container
   module_controlled_env_vars = [
     "DD_API_KEY",
     "DD_SITE",
@@ -17,7 +19,6 @@ locals {
     "FUNCTION_TARGET",
     "DD_LOGS_INJECTION", # this is not an env var needed on the sidecar anyways
   ]
-
 
   ### Variables to handle input checks and infrastructure overrides (volume, volume_mount, sidecar container)
   # User-check 1: use this to override user's var.template.volumes and remove the shared volume if shared_volume already exists and logging is enabled, else keep user's volumes
@@ -125,47 +126,73 @@ locals {
     { service = local.datadog_service, dd_sls_terraform_module = local.module_version },
     var.datadog_env != null ? { env = var.datadog_env } : {},
     var.datadog_version != null ? { version = var.datadog_version } : {},
+    local.apm_labels,
   )
 
   # Update the environments on the containers
   template_containers = concat(
-    [for container in local.containers_without_sidecar :
-      merge(container, {
-        env = concat(
-          # First, preserve user-defined env vars with value_source
-          [for env in coalesce(container.env, []) : { name = env.name, value = env.value, value_source = env.value_source }
-          if env.value_source != null && !contains(local.module_controlled_env_vars, env.name)],
-          # Then add module-managed env vars
-          [for name, value in merge(
-            # variables which can be overrided by user provided configuration
-            local.shared_env_vars,
-            { DD_LOGS_INJECTION = "true" },
-            # user provided env vars (without value_source) converted to map
-            { for env in coalesce(container.env, []) : env.name => env.value if env.value_source == null },
-            # always override user configuration with these env vars
-            { DD_SERVERLESS_LOG_PATH = var.datadog_logging_path }
-          ) : { name = name, value = value, value_source = null }]
-        )
-        # User-check 3: check for each provided container the volume mounts and if logging is enabled and the shared volume is an input, do not mount it again
-        volume_mounts = concat(
-          var.datadog_enable_logging ? [var.datadog_shared_volume] : [],
-          [for vm in coalesce(container.volume_mounts, []) : vm if contains(local.filtered_volume_mounts, vm)],
-        )
-    })],
+    [for idx, container in local.containers_without_sidecar :
+      merge(
+        container,
+        {
+          env = concat(
+            # First, preserve user-defined env vars with value_source
+            [for env in coalesce(container.env, []) : { name = env.name, value = env.value, value_source = env.value_source }
+              if env.value_source != null && !contains(
+                concat(
+                  local.module_controlled_env_vars,
+                  idx == local.apm_main_container_index ? local.apm_main_container_managed_env_names : [],
+                ),
+                env.name,
+            )],
+            # Then add module-managed env vars
+            [for name, value in merge(
+              # variables which can be overrided by user provided configuration
+              local.shared_env_vars,
+              { DD_LOGS_INJECTION = "true" },
+              # user provided env vars (without value_source) converted to map
+              { for env in coalesce(container.env, []) : env.name => env.value if env.value_source == null },
+              # always override user configuration with these env vars
+              { DD_SERVERLESS_LOG_PATH = var.datadog_logging_path },
+              # SSI env (tracing toggle, injection mode tag, merged loader vars) on the main container
+              idx == local.apm_main_container_index ? local.apm_main_container_env : {},
+            ) : { name = name, value = value, value_source = null }]
+          )
+          # User-check 3: check for each provided container the volume mounts and if logging is enabled and the shared volume is an input, do not mount it again
+          volume_mounts = concat(
+            var.datadog_enable_logging ? [var.datadog_shared_volume] : [],
+            # Tracer volume is only needed on the container that loads the tracer.
+            idx == local.apm_main_container_index ? [local.tracer_volume_mount] : [],
+            [for vm in coalesce(container.volume_mounts, []) : vm if contains(local.filtered_volume_mounts, vm)],
+          )
+          # When SSI is enabled, Cloud Run start ordering holds the main container until the
+          # readiness startup probe passes, so the image entrypoint is left untouched.
+          depends_on = idx == local.apm_main_container_index ? distinct(concat(
+            coalesce(container.depends_on, []),
+            local.apm_main_container_depends_on,
+          )) : container.depends_on
+        },
+    )],
     # We add the sidecar at the end due to an issue where cloud sql mounts are always
     # assigned to the first container (assuming it is the main app), so we should preserve
     # that ordering here to ensure that cloud sql mounts aren't added to the sidecar
-    [local.sidecar_container],
+    concat(
+      local.tracer_sidecar != null ? [local.tracer_sidecar] : [],
+      [local.sidecar_container],
+    ),
   )
 
   # If dd_enable_logging is true, add the shared volume to the template volumes
-  template_volumes = concat(local.volumes_without_shared_volume, var.datadog_enable_logging ? [{
+  logger_volume = var.datadog_enable_logging ? [{
     name = var.datadog_shared_volume.name
     empty_dir = {
       medium     = "MEMORY"
       size_limit = var.datadog_shared_volume.size_limit
     }
-  }] : [])
+  }] : []
+
+  template_volumes = concat(local.volumes_without_shared_volume, local.tracer_volume, local.logger_volume)
+
 }
 
 
