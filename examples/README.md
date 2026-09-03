@@ -5,13 +5,31 @@ container.
 
 ## Available Languages
 
-- [Python](./python)
+These examples install the Datadog tracer in the application image and configure it
+themselves:
+
+- [Python](./python/)
 - [Node.js](./node/)
+- [Node.js (Cloud Run function)](./node-function/)
 - [Go](./go/)
 - [Java](./java/)
 - [.NET](./dotnet/)
 - [Ruby](./ruby/)
 - [PHP](./php/)
+
+## Single Step Instrumentation (SSI)
+
+These examples ship no tracer in the application image. They set
+`datadog_apm_instrumentation`, and the module runs a tracer sidecar that stages the
+tracer on a shared volume and points the runtime at it. Go is not covered, since the
+Go tracer has to be compiled into the binary.
+
+- [Python](./python-ssi/)
+- [Node.js](./node-ssi/)
+- [Node.js (Cloud Run function)](./node-function-ssi/)
+- [.NET](./dotnet-ssi/)
+- [Ruby](./ruby-ssi/)
+- [PHP](./php-ssi/)
 
 ## Quick Deploy
 
