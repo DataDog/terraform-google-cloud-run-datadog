@@ -10,12 +10,14 @@ on:
     paths:
       - '*.tf'
       - 'e2e/**'
+      - 'examples/**'
       - '.github/workflows/e2e.yaml'
   push:
     branches: [main]
     paths:
       - '*.tf'
       - 'e2e/**'
+      - 'examples/**'
       - '.github/workflows/e2e.yaml'
   workflow_dispatch:
 
