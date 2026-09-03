@@ -62,6 +62,23 @@ variable "datadog_version" {
   nullable    = false
 }
 
+variable "build_config" {
+  type = object({
+    function_target          = string
+    image_uri                = optional(string)
+    base_image               = optional(string)
+    enable_automatic_updates = optional(bool)
+  })
+  description = "When set, configures Cloud Run Functions build_config (used by the node-function example)."
+  default     = null
+}
+
+variable "base_image_uri" {
+  type        = string
+  description = "Optional base_image_uri for the workload container (Cloud Run Functions)."
+  default     = null
+}
+
 variable "run_id" {
   type        = string
   description = "Unique run id marker. Emitted as the one_e2e_run_id Datadog tag for run-scoped telemetry queries."

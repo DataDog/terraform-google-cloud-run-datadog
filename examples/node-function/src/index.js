@@ -26,5 +26,5 @@ functions.http('helloHttp', (req, res) => {
   logger.info('Hello World!');
   span.finish();
   res.set('Content-Type', 'text/plain');
-  res.send(`Hello ${req.query.name || req.body.name || 'World'}!`);
+  res.send(`Hello ${req.query?.name || req.body?.name || 'World'}!`);
 });
