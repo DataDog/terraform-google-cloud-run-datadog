@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Unless explicitly stated otherwise all files in this repository are licensed under the Apache-2.0 License.
+This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2025 Datadog, Inc.
+-->
+<configuration>
+  <!-- The tracer populates these MDC keys when DD_LOGS_INJECTION=true, which is what
+       correlates a log line with its trace. -->
+  <property name="DD_PATTERN"
+            value="%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level [dd.service=%X{dd.service:-} dd.env=%X{dd.env:-} dd.version=%X{dd.version:-} dd.trace_id=%X{dd.trace_id:-} dd.span_id=%X{dd.span_id:-}] %logger{36} - %msg%n"/>
+
+  <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>${DD_PATTERN}</pattern>
+    </encoder>
+  </appender>
+
+  <!-- APP_LOG_FILE is derived from DD_SERVERLESS_LOG_PATH in Application.main. The sidecar
+       tails this file off the shared volume and ships the lines to Datadog. -->
+  <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+    <file>${APP_LOG_FILE:-/shared-volume/logs/app.log}</file>
+    <append>true</append>
+    <encoder>
+      <pattern>${DD_PATTERN}</pattern>
+    </encoder>
+  </appender>
+
+  <root level="INFO">
+    <appender-ref ref="CONSOLE"/>
+    <appender-ref ref="FILE"/>
+  </root>
+</configuration>

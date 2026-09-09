@@ -1,0 +1,14 @@
+# Build artifacts
+target/
+
+# Documentation
+*.md
+
+# License files
+licenses.json
+aggregate-third-party-report.html
+LICENSE-3rdparty.csv
+
+# Git
+.git
+.gitignore

@@ -34,6 +34,9 @@ const (
 	testVersion = "1-0-0"
 
 	nodeFunctionBaseImage = "us-central1-docker.pkg.dev/serverless-runtimes/google-22-full/runtimes/nodejs22"
+
+	// The JVM plus the tracer does not fit in the fixture's default container memory.
+	javaWorkloadMemory = "1Gi"
 )
 
 type config struct {
@@ -84,6 +87,8 @@ type scenario struct {
 	ssiLanguage string
 	// isFunction enables Cloud Run Functions build_config + base_image_uri.
 	isFunction bool
+	// workloadMemory overrides the fixture's default container memory limit.
+	workloadMemory string
 }
 
 func runtimeScenarios() []scenario {
@@ -93,6 +98,11 @@ func runtimeScenarios() []scenario {
 		{
 			name:     "node_sidecar",
 			imageEnv: "E2E_IMAGE_NODE_SIDECAR",
+		},
+		{
+			name:           "java_sidecar",
+			imageEnv:       "E2E_IMAGE_JAVA_SIDECAR",
+			workloadMemory: javaWorkloadMemory,
 		},
 		{
 			name:     "python_sidecar",
@@ -120,6 +130,12 @@ func runtimeScenarios() []scenario {
 			name:        "node_ssi",
 			imageEnv:    "E2E_IMAGE_NODE_SSI",
 			ssiLanguage: "js",
+		},
+		{
+			name:           "java_ssi",
+			imageEnv:       "E2E_IMAGE_JAVA_SSI",
+			ssiLanguage:    "java",
+			workloadMemory: javaWorkloadMemory,
 		},
 		{
 			name:        "python_ssi",
@@ -200,6 +216,9 @@ func runCloudRunE2E(t *testing.T, cfg config, sc scenario) {
 		"datadog_version": testVersion,
 		"run_id":          runID,
 		"created_ts":      createdTS,
+	}
+	if sc.workloadMemory != "" {
+		vars["workload_memory"] = sc.workloadMemory
 	}
 	if sc.ssiLanguage != "" {
 		vars["datadog_apm_instrumentation"] = map[string]interface{}{

@@ -133,12 +133,12 @@ build_pack_image() {
 }
 
 # Sidecar mode: every runtime, including go, which has no SSI path in the module.
-for runtime in go node python ruby php dotnet; do
+for runtime in go node java python ruby php dotnet; do
   build_docker_image "$runtime" sidecar
 done
 
 # SSI mode: the runtimes the module can inject a tracer for.
-for runtime in node python ruby php dotnet; do
+for runtime in node java python ruby php dotnet; do
   build_docker_image "$runtime" ssi
 done
 

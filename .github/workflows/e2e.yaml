@@ -61,6 +61,7 @@ jobs:
           policy: terraform-google-cloud-run-datadog-e2e
 
       - name: Build e2e workload images
+        timeout-minutes: 30
         env:
           GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID_E2E }}
           GCP_REGION: ${{ vars.GCP_REGION_E2E }}
