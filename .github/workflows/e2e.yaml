@@ -76,7 +76,8 @@ jobs:
           # shellcheck disable=SC1091
           source .image-env
           set +a
-          go test -count=1 -v -timeout 120m -json ./... | jq --unbuffered -jr 'select(.Action == "output") | .Output'
+          # -p 1 streams -v output as tests run, across multiple packages.
+          go test -count=1 -v -p 1 -timeout 120m ./...
         env:
           GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID_E2E }}
           GCP_REGION: ${{ vars.GCP_REGION_E2E }}
