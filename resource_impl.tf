@@ -80,7 +80,7 @@ resource "google_cloud_run_v2_service" "this" {
         sandbox_launcher = try(containers.value.sandbox_launcher, null)
         working_dir      = try(containers.value.working_dir, null)
         dynamic "env" {
-          for_each = try(containers.value.env, null) != null ? containers.value.env : []
+          for_each = try([for e in containers.value.env : e], [])
           content {
             name  = env.value.name
             value = try(env.value.value, null)
@@ -118,7 +118,7 @@ resource "google_cloud_run_v2_service" "this" {
                 path = try(containers.value.liveness_probe.http_get.path, null)
                 port = try(containers.value.liveness_probe.http_get.port, null)
                 dynamic "http_headers" {
-                  for_each = try(containers.value.liveness_probe.http_get.http_headers, null) != null ? containers.value.liveness_probe.http_get.http_headers : []
+                  for_each = try([for e in containers.value.liveness_probe.http_get.http_headers : e], [])
                   content {
                     name  = http_headers.value.name
                     value = try(http_headers.value.value, null)
@@ -192,7 +192,7 @@ resource "google_cloud_run_v2_service" "this" {
                 path = try(containers.value.startup_probe.http_get.path, null)
                 port = try(containers.value.startup_probe.http_get.port, null)
                 dynamic "http_headers" {
-                  for_each = try(containers.value.startup_probe.http_get.http_headers, null) != null ? containers.value.startup_probe.http_get.http_headers : []
+                  for_each = try([for e in containers.value.startup_probe.http_get.http_headers : e], [])
                   content {
                     name  = http_headers.value.name
                     value = try(http_headers.value.value, null)
@@ -209,7 +209,7 @@ resource "google_cloud_run_v2_service" "this" {
           }
         }
         dynamic "volume_mounts" {
-          for_each = try(containers.value.volume_mounts, null) != null ? containers.value.volume_mounts : []
+          for_each = try([for e in containers.value.volume_mounts : e], [])
           content {
             mount_path = volume_mounts.value.mount_path
             name       = volume_mounts.value.name
@@ -270,7 +270,7 @@ resource "google_cloud_run_v2_service" "this" {
             default_mode = try(volumes.value.secret.default_mode, null)
             secret       = volumes.value.secret.secret
             dynamic "items" {
-              for_each = try(volumes.value.secret.items, null) != null ? volumes.value.secret.items : []
+              for_each = try([for e in volumes.value.secret.items : e], [])
               content {
                 mode    = try(items.value.mode, null)
                 path    = items.value.path
@@ -287,7 +287,7 @@ resource "google_cloud_run_v2_service" "this" {
         connector = try(var.template.vpc_access.connector, null)
         egress    = try(var.template.vpc_access.egress, null)
         dynamic "network_interfaces" {
-          for_each = try(var.template.vpc_access.network_interfaces, null) != null ? var.template.vpc_access.network_interfaces : []
+          for_each = try([for e in var.template.vpc_access.network_interfaces : e], [])
           content {
             network    = try(network_interfaces.value.network, null)
             subnetwork = try(network_interfaces.value.subnetwork, null)
@@ -306,7 +306,7 @@ resource "google_cloud_run_v2_service" "this" {
     }
   }
   dynamic "traffic" {
-    for_each = try(var.traffic, null) != null ? var.traffic : []
+    for_each = try([for e in var.traffic : e], [])
     content {
       percent  = try(traffic.value.percent, null)
       revision = try(traffic.value.revision, null)

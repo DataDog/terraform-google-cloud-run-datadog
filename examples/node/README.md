@@ -52,7 +52,7 @@ Your Node.js service is now fully instrumented with the Datadog sidecar agent. T
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.5.0 |
-| <a name="requirement_google"></a> [google](#requirement\_google) | >= 6.34.0 |
+| <a name="requirement_google"></a> [google](#requirement\_google) | >= 8.11.0 |
 
 ## Modules
 
