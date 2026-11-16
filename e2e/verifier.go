@@ -17,6 +17,12 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
+// The fixture's secret-backed env var on the app container.
+const (
+	secretEnvName   = "E2E_SECRET"
+	secretEnvSecret = "tf-cloud-run-e2e-secret"
+)
+
 // Names the module assigns to the components it injects.
 const (
 	sidecarName       = "datadog-sidecar"
@@ -36,8 +42,17 @@ const (
 
 // These types mirror the Cloud Run v2 API response after protojson conversion.
 type envVar struct {
-	Name  string `json:"name"`
-	Value string `json:"value"`
+	Name        string          `json:"name"`
+	Value       string          `json:"value"`
+	ValueSource *envValueSource `json:"valueSource"`
+}
+
+type envValueSource struct {
+	SecretKeyRef *secretKeyRef `json:"secretKeyRef"`
+}
+
+type secretKeyRef struct {
+	Secret string `json:"secret"`
 }
 
 type volumeMount struct {
@@ -127,6 +142,16 @@ func (c container) envMap() map[string]string {
 	}
 
 	return m
+}
+
+func (c container) hasSecretEnv(name, secret string) bool {
+	for _, e := range c.Env {
+		if e.Name == name && e.ValueSource != nil && e.ValueSource.SecretKeyRef != nil && e.ValueSource.SecretKeyRef.Secret == secret {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (c container) hasMount(volumeName, mountPath string) bool {
@@ -308,6 +333,9 @@ func verifyInstrumented(svc cloudRunService, exp Expectations) error {
 		})
 		if !c.hasMount(sharedVolumeName, "/shared-volume") {
 			v.Addf("app container %q does not mount shared volume %q at /shared-volume", c.Name, sharedVolumeName)
+		}
+		if !c.hasSecretEnv(secretEnvName, secretEnvSecret) {
+			v.Addf("app container %q is missing env var %q from secret %q", c.Name, secretEnvName, secretEnvSecret)
 		}
 		if ssiEnabled {
 			verifyAppSSI(&v, c, exp.SSI)
