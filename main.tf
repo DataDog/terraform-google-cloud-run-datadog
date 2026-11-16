@@ -42,16 +42,13 @@ locals {
     }
     if try(c.ports, null) != null
   ]
-  # The Datadog agent sidecar listens on these ports in addition to datadog_sidecar.health_port.
-  agent_fixed_ports = {
-    8126 = "trace"
-    8125 = "DogStatsD"
-  }
+  # The Datadog agent sidecar also listens on this TCP port for traces.
+  agent_trace_port = 8126
   app_containers_on_health_port = [
     for c in local.app_container_ports : c.name if c.port == var.datadog_sidecar.health_port
   ]
-  app_containers_on_agent_fixed_ports = [
-    for c in local.app_container_ports : c if contains(keys(local.agent_fixed_ports), tostring(c.port))
+  app_containers_on_agent_trace_port = [
+    for c in local.app_container_ports : c.name if c.port == local.agent_trace_port
   ]
 
   # User-check 3: check for each provided container (ignoring sidecar if provided) the volume mounts and if logging is enabled, exclude all volume mounts with same name OR path as the shared volume
@@ -142,8 +139,8 @@ resource "terraform_data" "port_preconditions" {
       error_message = "${join(" ", [for name in local.app_containers_on_health_port : "Port ${var.datadog_sidecar.health_port} on container '${name}' (ports.container_port) conflicts with Datadog Agent health port ${var.datadog_sidecar.health_port}."])} Change ports.container_port or datadog_sidecar.health_port."
     }
     precondition {
-      condition     = length(local.app_containers_on_agent_fixed_ports) == 0
-      error_message = "${join(" ", [for c in local.app_containers_on_agent_fixed_ports : "Port ${c.port} on container '${c.name}' (ports.container_port) conflicts with Datadog Agent ${local.agent_fixed_ports[tostring(c.port)]} port ${c.port}."])} Change ports.container_port in template.containers."
+      condition     = length(local.app_containers_on_agent_trace_port) == 0
+      error_message = "${join(" ", [for name in local.app_containers_on_agent_trace_port : "Port ${local.agent_trace_port} on container '${name}' (ports.container_port) conflicts with Datadog Agent trace port ${local.agent_trace_port}."])} Change ports.container_port in template.containers."
     }
   }
 }

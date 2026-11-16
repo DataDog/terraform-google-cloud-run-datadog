@@ -90,7 +90,7 @@ The following Datadog variables can be set for sidecar:
 | `DD_ENV`                          | (Optional) Part of Unified Service Tagging (e.g., `serverless`, `staging`).                 | Set via `datadog_env`.                                                             |
 | `DD_SITE`                         | Target Datadog site (e.g., `datadoghq.com`, `datadoghq.eu`).                          | Set via `datadog_site`.                                                            |
 | `DD_API_KEY`                      | API key used by the Datadog agent to send telemetry.                                  | Set via `datadog_api_key`.                                                         |
-| `DD_HEALTH_PORT`                  | Port used by the sidecar’s startup probe. Defaults to `5555`. `terraform plan` fails if an application container port equals it, `8126`, or `8125`. | Set via `datadog_sidecar.health_port`.                                             |
+| `DD_HEALTH_PORT`                  | Port used by the sidecar’s startup probe. Defaults to `5555`. `terraform plan` fails if an application container port equals it or `8126`. | Set via `datadog_sidecar.health_port`.                                             |
 | `DD_LOG_LEVEL`                    | (Optional) Controls log verbosity in Cloud Run logs (`TRACE`, `DEBUG`, `INFO`, etc.). | Set via `datadog_log_level`.                                                       |
 | Other agent environment variables | For advanced agent configuration. Avoid overriding any of the above variables.        | Set via `datadog_sidecar.env_vars`.                                                     |
 
