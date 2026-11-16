@@ -20,9 +20,9 @@ locals {
   tracer_ready_probe = local.apm_enabled ? {
     tcp_socket            = { port = var.datadog_apm_instrumentation.ready_port }
     initial_delay_seconds = 0
-    period_seconds        = 5
+    period_seconds        = 1
     timeout_seconds       = 1
-    failure_threshold     = 48
+    failure_threshold     = 240
   } : null
   # Matches $REPO in dd-lib-*-init copy-lib.sh (marker: $TARGET_PATH/.$REPO-copy-finished).
   tracer_repo_name = local.apm_enabled ? ({
