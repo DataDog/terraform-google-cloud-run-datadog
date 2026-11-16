@@ -185,6 +185,19 @@ locals {
   # Index the module instruments; null when SSI is disabled so no container matches it.
   apm_main_container_index = local.apm_enabled ? local.main_container_index : null
 
+  # gcloud rejects a depends_on keyed by an empty container name, so an unnamed main container
+  # gets the first free name of app, app-1, app-2, and so on.
+  apm_taken_container_names = concat(
+    [for c in local.containers_without_sidecar : c.name if c.name != null],
+    [local.tracer_sidecar_name, var.datadog_sidecar.name],
+  )
+  apm_main_container_name = local.main_container == null ? null : (
+    local.main_container.name != null ? local.main_container.name : [
+      for name in concat(["app"], [for i in range(1, length(local.apm_taken_container_names) + 1) : "app-${i}"]) : name
+      if !contains(local.apm_taken_container_names, name)
+    ][0]
+  )
+
   # Literal (non-secret) env on the main container — the base for fragment-aware SSI merges.
   main_container_literal_env = local.main_container == null ? tomap({}) : tomap({
     for env in coalesce(local.main_container.env, []) : env.name => env.value

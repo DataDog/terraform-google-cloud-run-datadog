@@ -135,6 +135,7 @@ locals {
       merge(
         container,
         {
+          name = idx == local.apm_main_container_index ? local.apm_main_container_name : container.name
           env = concat(
             # First, preserve user-defined env vars with value_source
             [for env in coalesce(container.env, []) : { name = env.name, value = env.value, value_source = env.value_source }
