@@ -33,6 +33,27 @@ locals {
     if c.name != var.datadog_sidecar.name
   ]
 
+  # Ports app containers listen on. A ports block without a container_port listens on 8080.
+  cloud_run_default_container_port = 8080
+  app_container_ports = [
+    for c in local.containers_without_sidecar : {
+      name = coalesce(try(c.name, null), "<unnamed>")
+      port = coalesce(try(c.ports.container_port, null), local.cloud_run_default_container_port)
+    }
+    if try(c.ports, null) != null
+  ]
+  # The Datadog agent sidecar listens on these ports in addition to datadog_sidecar.health_port.
+  agent_fixed_ports = {
+    8126 = "traces"
+    8125 = "DogStatsD metrics"
+  }
+  app_containers_on_health_port = [
+    for c in local.app_container_ports : c.name if c.port == var.datadog_sidecar.health_port
+  ]
+  app_containers_on_agent_fixed_ports = [
+    for c in local.app_container_ports : c if contains(keys(local.agent_fixed_ports), tostring(c.port))
+  ]
+
   # User-check 3: check for each provided container (ignoring sidecar if provided) the volume mounts and if logging is enabled, exclude all volume mounts with same name OR path as the shared volume
   all_volume_mounts = flatten([
     for c in coalesce(local.containers_without_sidecar, []) :
@@ -109,6 +130,21 @@ check "volume_mounts_share_names_and_or_paths" {
   assert {
     condition     = length(local.filtered_volume_mounts) == length(local.all_volume_mounts)
     error_message = "Logging is enabled, and user-inputted volume mounts overlap with values for var.datadog_shared_volume. This module will remove the following containers' volume_mounts sharing a name or path with the Datadog shared volume: ${join(",", [for vm in local.all_volume_mounts : format("\n%s:%s", vm.name, vm.mount_path) if !contains(local.filtered_volume_mounts, vm)])}.\nThis module will add the Datadog volume_mount instead to all containers."
+  }
+}
+
+# Containers in a Cloud Run instance share one network namespace, so an app container can't
+# listen on an agent port: the agent binds first and the app fails to start.
+resource "terraform_data" "port_preconditions" {
+  lifecycle {
+    precondition {
+      condition     = length(local.app_containers_on_health_port) == 0
+      error_message = "The ports.container_port of container ${join(", ", local.app_containers_on_health_port)} (${var.datadog_sidecar.health_port}) equals datadog_sidecar.health_port (${var.datadog_sidecar.health_port}), and the Datadog agent takes that port. Change datadog_sidecar.health_port or the container's ports.container_port in template.containers."
+    }
+    precondition {
+      condition     = length(local.app_containers_on_agent_fixed_ports) == 0
+      error_message = "${join("; ", [for c in local.app_containers_on_agent_fixed_ports : "The ports.container_port of container ${c.name} (${c.port}) equals the Datadog agent ${local.agent_fixed_ports[tostring(c.port)]} port (${c.port})"])}. Change the container's ports.container_port in template.containers to a port other than ${join(" and ", keys(local.agent_fixed_ports))}."
+    }
   }
 }
 
