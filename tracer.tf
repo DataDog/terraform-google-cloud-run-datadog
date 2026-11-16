@@ -159,9 +159,12 @@ locals {
   ]
   # Listeners that already claim the readiness port in the instance's shared network namespace.
   apm_ready_port_collisions = local.apm_enabled ? concat(
-    var.datadog_sidecar.health_port == var.datadog_apm_instrumentation.ready_port ? ["datadog_sidecar.health_port"] : [],
+    var.datadog_sidecar.health_port == var.datadog_apm_instrumentation.ready_port ? [
+      "datadog_apm_instrumentation.ready_port ${var.datadog_apm_instrumentation.ready_port} conflicts with Datadog Agent health port ${var.datadog_sidecar.health_port}. Change datadog_apm_instrumentation.ready_port or datadog_sidecar.health_port.",
+    ] : [],
     [
-      for c in local.app_container_ports : "the ports.container_port of container ${c.name}"
+      for c in local.app_container_ports :
+      "datadog_apm_instrumentation.ready_port ${var.datadog_apm_instrumentation.ready_port} conflicts with port ${c.port} on container '${c.name}' (ports.container_port). Change datadog_apm_instrumentation.ready_port or container '${c.name}' ports.container_port."
       if c.port == var.datadog_apm_instrumentation.ready_port
     ],
   ) : []
@@ -339,7 +342,7 @@ resource "terraform_data" "ssi_preconditions" {
       # Containers in an instance share a network namespace, so the readiness port must not
       # be claimed by the agent sidecar or by an app container.
       condition     = length(local.apm_ready_port_collisions) == 0
-      error_message = "datadog_apm_instrumentation.ready_port (${var.datadog_apm_instrumentation.ready_port}) equals ${join(" and ", local.apm_ready_port_collisions)} (${var.datadog_apm_instrumentation.ready_port}). All containers in a Cloud Run instance share one network namespace, so the tracer readiness signal needs a port of its own. Change datadog_apm_instrumentation.ready_port to a free port."
+      error_message = join(" ", local.apm_ready_port_collisions)
     }
     precondition {
       condition     = length(local.containers_without_sidecar) > 0

@@ -44,8 +44,8 @@ locals {
   ]
   # The Datadog agent sidecar listens on these ports in addition to datadog_sidecar.health_port.
   agent_fixed_ports = {
-    8126 = "traces"
-    8125 = "DogStatsD metrics"
+    8126 = "trace"
+    8125 = "DogStatsD"
   }
   app_containers_on_health_port = [
     for c in local.app_container_ports : c.name if c.port == var.datadog_sidecar.health_port
@@ -139,11 +139,11 @@ resource "terraform_data" "port_preconditions" {
   lifecycle {
     precondition {
       condition     = length(local.app_containers_on_health_port) == 0
-      error_message = "The ports.container_port of container ${join(", ", local.app_containers_on_health_port)} (${var.datadog_sidecar.health_port}) equals datadog_sidecar.health_port (${var.datadog_sidecar.health_port}), and the Datadog agent takes that port. Change datadog_sidecar.health_port or the container's ports.container_port in template.containers."
+      error_message = "${join(" ", [for name in local.app_containers_on_health_port : "Port ${var.datadog_sidecar.health_port} on container '${name}' (ports.container_port) conflicts with Datadog Agent health port ${var.datadog_sidecar.health_port}."])} Change ports.container_port or datadog_sidecar.health_port."
     }
     precondition {
       condition     = length(local.app_containers_on_agent_fixed_ports) == 0
-      error_message = "${join("; ", [for c in local.app_containers_on_agent_fixed_ports : "The ports.container_port of container ${c.name} (${c.port}) equals the Datadog agent ${local.agent_fixed_ports[tostring(c.port)]} port (${c.port})"])}. Change the container's ports.container_port in template.containers to a port other than ${join(" and ", keys(local.agent_fixed_ports))}."
+      error_message = "${join(" ", [for c in local.app_containers_on_agent_fixed_ports : "Port ${c.port} on container '${c.name}' (ports.container_port) conflicts with Datadog Agent ${local.agent_fixed_ports[tostring(c.port)]} port ${c.port}."])} Change ports.container_port in template.containers."
     }
   }
 }
