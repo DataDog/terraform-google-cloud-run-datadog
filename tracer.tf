@@ -368,7 +368,8 @@ resource "terraform_data" "ssi_preconditions" {
   }
 }
 
-# The merged value still deploys and the tracer still loads, so this only warns.
+# Matches auto_inject, which skips .NET injection when the merged LD_PRELOAD exceeds 1,024 bytes
+# (auto_inject src/lang/dotnet/lang.c). glibc and the .NET tracer have no such limit, so this only warns.
 check "apm_loader_env_within_max_length" {
   assert {
     condition     = !local.apm_enabled || length(local.apm_loader_env_exceeding_max_length) == 0
