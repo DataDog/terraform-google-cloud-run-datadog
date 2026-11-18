@@ -53,6 +53,18 @@ module "datadog" {
         ports = {
           container_port = 8080
         }
+        # The secret is shared e2e infrastructure managed in serverless-ci (e2e/terraform/gcp).
+        env = [
+          {
+            name = "E2E_SECRET"
+            value_source = {
+              secret_key_ref = {
+                secret  = "tf-cloud-run-e2e-secret"
+                version = "latest"
+              }
+            }
+          },
+        ]
       },
     ]
     scaling = {

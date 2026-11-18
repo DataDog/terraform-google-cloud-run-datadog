@@ -38,6 +38,13 @@
             "template.vpc_access.network_interfaces.network",
             "template.vpc_access.network_interfaces.subnetwork",
             "traffic.percent"
+        ],
+        "never_allow": [
+            "ssh_enabled",
+            "template.sandboxes",
+            "template.scaling.concurrency_utilization",
+            "template.scaling.cpu_utilization",
+            "template.workload_identity_config"
         ]
     }
 }

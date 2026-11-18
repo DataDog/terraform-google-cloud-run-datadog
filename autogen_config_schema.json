@@ -38,6 +38,20 @@
       "title": "FieldsConfig",
       "type": "object"
     },
+    "LifecycleConfig": {
+      "properties": {
+        "ignore_changes": {
+          "description": "Static Terraform attribute paths to include in the resource lifecycle ignore_changes list",
+          "items": {
+            "type": "string"
+          },
+          "title": "Ignore Changes",
+          "type": "array"
+        }
+      },
+      "title": "LifecycleConfig",
+      "type": "object"
+    },
     "TfProvider": {
       "properties": {
         "name": {
@@ -79,6 +93,10 @@
     "fields": {
       "$ref": "#/$defs/FieldsConfig",
       "description": "Configuration for logic related to fields"
+    },
+    "lifecycle": {
+      "$ref": "#/$defs/LifecycleConfig",
+      "description": "Configuration for the generated resource lifecycle block"
     },
     "additional_providers": {
       "description": "Additional providers to include in the generated version file",
