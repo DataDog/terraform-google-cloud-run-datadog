@@ -27,8 +27,6 @@ module "datadog" {
   datadog_apm_instrumentation = var.datadog_apm_instrumentation
   build_config                = var.build_config
 
-  # Pin the sidecar artifact by digest so an upstream serverless-init change
-  # never turns into a red e2e run for this module.
   datadog_sidecar = {
     image = var.sidecar_image
   }

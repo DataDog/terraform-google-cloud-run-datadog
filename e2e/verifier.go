@@ -268,7 +268,7 @@ func verifyInstrumented(svc cloudRunService, exp Expectations) error {
 		wantAppTags = expectedInstrumentedDDTags(exp.RunID)
 	}
 
-	// Sidecar: present and running the pinned serverless-init image.
+	// Sidecar: present and running the serverless-init image the fixture deployed.
 	var sidecar *container
 	for i := range containers {
 		if containers[i].Name == sidecarName {
@@ -279,7 +279,7 @@ func verifyInstrumented(svc cloudRunService, exp Expectations) error {
 		v.Addf("datadog-sidecar container missing")
 	} else {
 		if sidecar.Image != exp.SidecarImage {
-			v.Addf("sidecar image = %q, want pinned image %q", sidecar.Image, exp.SidecarImage)
+			v.Addf("sidecar image = %q, want %q", sidecar.Image, exp.SidecarImage)
 		}
 
 		// The module-owned volume must retain its expected in-memory configuration.
