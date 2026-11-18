@@ -152,22 +152,24 @@ locals {
 
   # instrument exactly one main app container.
   # Prefer the sole port-bearing candidate; if none declare ports, allow a single candidate;
-  # otherwise terraform_data.ssi_preconditions rejects the ambiguous layout.
+  # otherwise the layout is ambiguous and rejected (enforced by check blocks when SSI is enabled).
   apm_containers_with_ports = [
     for c in local.containers_without_sidecar : c
     if try(c.ports, null) != null
   ]
-  # Listeners that already claim the readiness port in the instance's shared network namespace.
-  apm_ready_port_collisions = local.apm_enabled ? concat(
-    var.datadog_sidecar.health_port == var.datadog_apm_instrumentation.ready_port ? [
-      "datadog_apm_instrumentation.ready_port ${var.datadog_apm_instrumentation.ready_port} conflicts with Datadog Agent health port ${var.datadog_sidecar.health_port}. Change datadog_apm_instrumentation.ready_port or datadog_sidecar.health_port.",
-    ] : [],
-    [
-      for c in local.app_container_ports :
-      "datadog_apm_instrumentation.ready_port ${var.datadog_apm_instrumentation.ready_port} conflicts with port ${c.port} on container '${c.name}' (ports.container_port). Change datadog_apm_instrumentation.ready_port or container '${c.name}' ports.container_port."
-      if c.port == var.datadog_apm_instrumentation.ready_port
-    ],
-  ) : []
+  apm_app_container_ports = [
+    for c in local.apm_containers_with_ports :
+    coalesce(try(c.ports.container_port, null), local.cloud_run_default_container_port)
+  ]
+  # Ports already claimed inside the instance's shared network namespace.
+  apm_reserved_ports = concat(
+    [var.datadog_sidecar.health_port],
+    local.apm_app_container_ports,
+  )
+  apm_ready_port_is_reserved = local.apm_enabled ? contains(
+    local.apm_reserved_ports,
+    var.datadog_apm_instrumentation.ready_port,
+  ) : false
   main_container_indexes = [
     for idx, c in local.containers_without_sidecar : idx
     if(
@@ -312,7 +314,7 @@ locals {
   ### Contributions to the main app container, applied in local.template_containers
 
   # Env vars the module owns on the instrumented container. Loader vars are listed here so a
-  # secret-backed value is not carried through: they cannot be fragment-merged (rejected by a precondition).
+  # secret-backed value is not carried through: they cannot be fragment-merged (rejected by check).
   apm_main_container_managed_env_names = concat(
     local.apm_module_controlled_env_vars,
     local.apm_loader_env_names,
@@ -332,47 +334,54 @@ locals {
   ] : []
 }
 
-# Each precondition rejects an SSI configuration that would deploy a broken service, silently
-# drop the customer's configuration, or leave the app uninstrumented.
-resource "terraform_data" "ssi_preconditions" {
-  count = local.apm_enabled ? 1 : 0
-
-  lifecycle {
-    precondition {
-      # Containers in an instance share a network namespace, so the readiness port must not
-      # be claimed by the agent sidecar or by an app container.
-      condition     = length(local.apm_ready_port_collisions) == 0
-      error_message = join(" ", local.apm_ready_port_collisions)
-    }
-    precondition {
-      condition     = length(local.containers_without_sidecar) > 0
-      error_message = "No application container was found to instrument. Add a container to template.containers (other than the Datadog agent sidecar)."
-    }
-    precondition {
-      condition = length(local.containers_without_sidecar) == 0 || local.main_container_index != null
-      error_message = length(local.apm_containers_with_ports) > 1 ? (
-        "Multiple containers declare ports, so the main container is ambiguous: ${join(", ", [for c in local.apm_containers_with_ports : coalesce(try(c.name, null), "<unnamed>")])}. Cloud Run allows exactly one main container."
-        ) : (
-        "No container declares ports, so the main container is ambiguous: ${join(", ", [for c in local.containers_without_sidecar : coalesce(try(c.name, null), "<unnamed>")])}. Declare a container port on your main container."
-      )
-    }
-    precondition {
-      condition     = length(local.apm_loader_secret_env_names) == 0
-      error_message = "SSI loader env var(s) on the main container are populated from a secret reference, which Datadog cannot safely extend: ${join(", ", local.apm_loader_secret_env_names)}. Set them to a literal value or remove them before enabling datadog_apm_instrumentation."
-    }
-    precondition {
-      condition     = length(local.apm_loader_duplicate_env_names) == 0
-      error_message = "SSI loader env var(s) appear more than once on the main container, so Datadog cannot safely modify them: ${join(", ", local.apm_loader_duplicate_env_names)}. Remove the duplicates before enabling datadog_apm_instrumentation."
-    }
-    precondition {
-      condition     = length(local.apm_loader_set_if_absent_conflicts) == 0
-      error_message = "SSI loader env var(s) on the main container conflict with required tracer values: ${join(", ", local.apm_loader_set_if_absent_conflicts)}. Remove or update them to match the Datadog tracer settings before enabling datadog_apm_instrumentation."
-    }
+check "ready_port_is_not_already_in_use" {
+  assert {
+    # Containers in an instance share a network namespace, so the readiness port must not
+    # be claimed by the agent sidecar or by an app container.
+    condition     = !local.apm_ready_port_is_reserved
+    error_message = "datadog_apm_instrumentation.ready_port (${try(var.datadog_apm_instrumentation.ready_port, "null")}) is already used by datadog_sidecar.health_port or a template.containers port (a ports block without a container_port listens on ${local.cloud_run_default_container_port}). All containers in a Cloud Run instance share one network namespace, so the tracer readiness signal needs a port of its own."
   }
 }
 
-# Matches auto_inject, which skips .NET injection when the merged LD_PRELOAD exceeds 1,024 bytes
-# (auto_inject src/lang/dotnet/lang.c). glibc and the .NET tracer have no such limit, so this only warns.
+check "apm_main_container_exists" {
+  assert {
+    condition     = !local.apm_enabled || length(local.containers_without_sidecar) > 0
+    error_message = "No application container was found to instrument. Add a container to template.containers (other than the Datadog agent sidecar)."
+  }
+}
+
+check "apm_main_container_not_ambiguous" {
+  assert {
+    condition = !local.apm_enabled || local.main_container_index != null
+    error_message = length(local.apm_containers_with_ports) > 1 ? (
+      "Multiple containers declare ports, so the main container is ambiguous: ${join(", ", [for c in local.apm_containers_with_ports : coalesce(try(c.name, null), "<unnamed>")])}. Cloud Run allows exactly one main container."
+      ) : (
+      "No container declares ports, so the main container is ambiguous: ${join(", ", [for c in local.containers_without_sidecar : coalesce(try(c.name, null), "<unnamed>")])}. Declare a container port on your main container."
+    )
+  }
+}
+
+check "apm_loader_env_not_secret_backed" {
+  assert {
+    condition     = !local.apm_enabled || length(local.apm_loader_secret_env_names) == 0
+    error_message = "SSI loader env var(s) on the main container are populated from a secret reference, which Datadog cannot safely extend: ${join(", ", local.apm_loader_secret_env_names)}. Set them to a literal value or remove them before enabling datadog_apm_instrumentation."
+  }
+}
+
+check "apm_loader_env_not_duplicated" {
+  assert {
+    condition     = !local.apm_enabled || length(local.apm_loader_duplicate_env_names) == 0
+    error_message = "SSI loader env var(s) appear more than once on the main container, so Datadog cannot safely modify them: ${join(", ", local.apm_loader_duplicate_env_names)}. Remove the duplicates before enabling datadog_apm_instrumentation."
+  }
+}
+
+check "apm_loader_env_set_if_absent_compatible" {
+  assert {
+    condition     = !local.apm_enabled || length(local.apm_loader_set_if_absent_conflicts) == 0
+    error_message = "SSI loader env var(s) on the main container conflict with required tracer values: ${join(", ", local.apm_loader_set_if_absent_conflicts)}. Remove or update them to match the Datadog tracer settings before enabling datadog_apm_instrumentation."
+  }
+}
+
 check "apm_loader_env_within_max_length" {
   assert {
     condition     = !local.apm_enabled || length(local.apm_loader_env_exceeding_max_length) == 0

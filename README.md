@@ -106,9 +106,9 @@ datadog_apm_instrumentation = {
 
 Supported languages are `java`, `js`, `dotnet`, `python`, `ruby`, and `php`. The module uses the `latest` tracer image and `glibc` by default. Set `tracer_version` to pin the tracer and `tracer_libc = "musl"` for musl-based images. Ruby does not support musl, and pinned tracer versions must be above the per-language minimums listed in the `datadog_apm_instrumentation` input below.
 
-The module instruments the container that declares `ports`, the one Cloud Run routes requests to, and leaves any other container untouched. Existing loader variables such as `NODE_OPTIONS`, `PYTHONPATH`, or `JAVA_TOOL_OPTIONS` are preserved: Datadog's options are added alongside your values instead of replacing them. If the module cannot identify a single application container, or cannot safely extend one of these variables, `terraform plan` fails with an error that explains what to change.
+The module instruments the container that declares `ports`, the one Cloud Run routes requests to, and leaves any other container untouched. Existing loader variables such as `NODE_OPTIONS`, `PYTHONPATH`, or `JAVA_TOOL_OPTIONS` are preserved: Datadog's options are added alongside your values instead of replacing them. If the module cannot identify a single application container, or cannot safely extend one of these variables, it reports a warning during `terraform plan`.
 
-The tracer is copied into a shared volume, and the application container starts only once that copy and the Datadog agent are ready. This start order needs a named application container, so if yours has no name, the module names it `app`, or the first free name of `app-1`, `app-2`, and so on. Without a name, later `gcloud run deploy` and `gcloud run services update` commands fail with `Invalid container name ''`. The volume is in memory by default; set `volume_medium = "DISK"` to back it with disk instead, which deploys the service at the `BETA` launch stage. `ready_port` (default `18999`) is the port the tracer uses to signal that the copy finished, and `terraform plan` fails if it equals `datadog_sidecar.health_port` or an application container port.
+The tracer is copied into a shared volume, and the application container starts only once that copy and the Datadog agent are ready. This start order needs a named application container, so if yours has no name, the module names it `app`, or the first free name of `app-1`, `app-2`, and so on. Without a name, later `gcloud run deploy` and `gcloud run services update` commands fail with `Invalid container name ''`. The volume is in memory by default; set `volume_medium = "DISK"` to back it with disk instead, which deploys the service at the `BETA` launch stage. `ready_port` (default `18999`) is the port the tracer uses to signal that the copy finished, and it must not collide with `datadog_sidecar.health_port` or an application container port.
 
 ```tf
 datadog_apm_instrumentation = {
@@ -198,7 +198,6 @@ No modules.
 |------|------|
 | [google_cloud_run_v2_service.this](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/cloud_run_v2_service) | resource |
 | [terraform_data.port_preconditions](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
-| [terraform_data.ssi_preconditions](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 
 ## Inputs
 
