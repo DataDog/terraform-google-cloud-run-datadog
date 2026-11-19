@@ -25,8 +25,8 @@ import (
 const (
 	defaultProject = "datadog-serverless-gcp-dev"
 	defaultRegion  = "us-central1"
-	// Pin the sidecar so failures blame this module, not upstream serverless-init drift.
-	defaultSidecarImage = "gcr.io/datadoghq/serverless-init@sha256:6fb7637628fdf31d536bc9c49fbe6304371df5e2ecdb15c1c2d5e2d66395c3a0"
+	// Run the latest serverless-init so e2e catches upstream changes before customers do.
+	defaultSidecarImage = "gcr.io/datadoghq/serverless-init:latest"
 
 	testEnv = "e2e"
 	// The module mirrors datadog_version into a GCP label, which rejects '.',

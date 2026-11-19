@@ -34,7 +34,7 @@ variable "workload_memory" {
 
 variable "sidecar_image" {
   type        = string
-  description = "Datadog serverless-init sidecar image, pinned by digest so failures blame the module, not upstream."
+  description = "Datadog serverless-init sidecar image."
   nullable    = false
 }
 
