@@ -157,8 +157,6 @@ locals {
     for c in local.containers_without_sidecar : c
     if try(c.ports, null) != null
   ]
-  # A ports block without a container_port still exposes a port: Cloud Run listens on 8080.
-  cloud_run_default_container_port = 8080
   apm_app_container_ports = [
     for c in local.apm_containers_with_ports :
     coalesce(try(c.ports.container_port, null), local.cloud_run_default_container_port)
