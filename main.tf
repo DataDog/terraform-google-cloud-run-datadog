@@ -2,7 +2,7 @@
 # This product includes software developed at Datadog (https://www.datadoghq.com/) Copyright 2025 Datadog, Inc.
 
 locals {
-  module_version  = "2_3_0"
+  module_version  = "2_3_1"
   datadog_service = var.datadog_service != null ? var.datadog_service : var.name
 
   # Base env vars the module always owns on every app container
