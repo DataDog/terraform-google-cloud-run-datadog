@@ -34,6 +34,16 @@ locals {
     php    = "dd-trace-php"
   })[var.datadog_apm_instrumentation.language] : null
   tracer_copy_finished_marker = local.apm_enabled ? "${local.tracer_volume_mount_path}/.${local.tracer_repo_name}-copy-finished" : null
+  # Files in a memory volume count against the tracer container that copies them. On the second generation
+  # execution environment, copying also fills reclaimable page cache, so peak usage is about 2.5 times the
+  # package size: up to 220 MiB for Java, Node.js, .NET, and Ruby, and 710 MiB for Python and PHP. Each memory
+  # limit holds that peak, and each volume is half its limit, so a tracer that outgrows its tier fails to
+  # deploy instead of being killed on later instance starts.
+  tracer_memory = local.apm_enabled ? (
+    contains(["python", "php"], var.datadog_apm_instrumentation.language)
+    ? { volume_size = "500Mi", memory_limit = "1Gi" }
+    : { volume_size = "256Mi", memory_limit = "512Mi" }
+  ) : null
   # Listener server to mark when copy is done
   tracer_probe_server = "/datadog-init/probe-server"
 
@@ -297,6 +307,9 @@ locals {
     ]
     volume_mounts = [local.tracer_volume_mount]
     startup_probe = local.tracer_ready_probe
+    resources = local.using_disk_medium ? null : {
+      limits = { cpu = "1", memory = local.tracer_memory.memory_limit }
+    }
   } : null
 
   tracer_volume = local.apm_enabled ? [{
@@ -304,7 +317,7 @@ locals {
     empty_dir = {
       medium = var.datadog_apm_instrumentation.volume_medium
       # Disk-backed emptyDir requires at least 10Gi size_limit
-      size_limit = local.using_disk_medium ? "10Gi" : "500Mi"
+      size_limit = local.using_disk_medium ? "10Gi" : local.tracer_memory.volume_size
     }
   }] : []
 

@@ -77,6 +77,11 @@ type container struct {
 	VolumeMounts []volumeMount `json:"volumeMounts"`
 	DependsOn    []string      `json:"dependsOn"`
 	StartupProbe *probe        `json:"startupProbe"`
+	Resources    *resources    `json:"resources"`
+}
+
+type resources struct {
+	Limits map[string]string `json:"limits"`
 }
 
 type emptyDir struct {
@@ -110,6 +115,19 @@ type SSIExpectations struct {
 // tracerInitImage is the published init image the tracer sidecar must run for this language.
 func (s *SSIExpectations) tracerInitImage() string {
 	return fmt.Sprintf("gcr.io/datadoghq/dd-lib-%s-init:%s", s.Language, s.TracerVersion)
+}
+
+// tracerMemory is the tracer volume size limit and, for memory volumes, the tracer sidecar
+// memory limit the module sets for this language.
+func (s *SSIExpectations) tracerMemory() (volumeSize, memoryLimit string) {
+	switch {
+	case s.VolumeMedium == "DISK":
+		return "10Gi", ""
+	case s.Language == "python" || s.Language == "php":
+		return "500Mi", "1Gi"
+	default:
+		return "256Mi", "512Mi"
+	}
 }
 
 // Expectations pins what an instrumented Cloud Run service must look like, so a mismatch
@@ -457,12 +475,16 @@ func verifyTracerSidecar(v *e2eshared.Violations, tmpl template, ssi *SSIExpecta
 	if vol.EmptyDir.Medium != ssi.VolumeMedium {
 		v.Addf("tracer volume medium = %q, want %q", vol.EmptyDir.Medium, ssi.VolumeMedium)
 	}
-	wantLimit := "500Mi"
-	if ssi.VolumeMedium == "DISK" {
-		wantLimit = "10Gi"
+	wantVolumeSize, wantMemory := ssi.tracerMemory()
+	if vol.EmptyDir.SizeLimit != wantVolumeSize {
+		v.Addf("tracer volume size_limit = %q, want %q", vol.EmptyDir.SizeLimit, wantVolumeSize)
 	}
-	if vol.EmptyDir.SizeLimit != wantLimit {
-		v.Addf("tracer volume size_limit = %q, want %q", vol.EmptyDir.SizeLimit, wantLimit)
+	var gotMemory string
+	if tracer.Resources != nil {
+		gotMemory = tracer.Resources.Limits["memory"]
+	}
+	if wantMemory != "" && gotMemory != wantMemory {
+		v.Addf("tracer sidecar memory limit = %q, want %q", gotMemory, wantMemory)
 	}
 }
 
